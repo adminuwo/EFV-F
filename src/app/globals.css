@@ -57,6 +57,19 @@ body {
   filter: blur(40px) brightness(0.4) sepia(1) hue-rotate(-50deg) !important;
   pointer-events: none !important;
   user-select: none !important;
+  transition: none !important;
+}
+
+.security-blur #security-shield {
+  display: block !important;
+  opacity: 1 !important;
+  pointer-events: all !important;
+  background: black !important;
+  transition: none !important;
+}
+
+.security-blur>*:not(#security-shield):not(#security-overlay) {
+  display: none !important;
 }
 
 #security-watermark-container {

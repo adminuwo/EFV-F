@@ -23,11 +23,18 @@ const SecureAudioPlayer: React.FC<SecureAudioPlayerProps> = ({ streamUrl, title,
     const [lastPosition, setLastPosition] = useState(0);
     const [isReady, setIsReady] = useState(false);
 
-    // Security: Disable Right-click
+    // Security: Toggle Global Security Layer & Disable local Right-click
     useEffect(() => {
+        // Enable Security
+        window.dispatchEvent(new CustomEvent('efv-enable-security'));
+
         const handleContextMenu = (e: MouseEvent) => e.preventDefault();
         window.addEventListener('contextmenu', handleContextMenu);
-        return () => window.removeEventListener('contextmenu', handleContextMenu);
+        return () => {
+            // Disable Security
+            window.dispatchEvent(new CustomEvent('efv-disable-security'));
+            window.removeEventListener('contextmenu', handleContextMenu);
+        };
     }, []);
 
     // Fetch saved progress on mount

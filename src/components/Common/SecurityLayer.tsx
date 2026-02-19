@@ -4,21 +4,23 @@ import React, { useEffect, useState, useCallback } from 'react';
 
 const SecurityLayer: React.FC = () => {
     const [isTampered, setIsTampered] = useState(false);
+    const [isActive, setIsActive] = useState(false); // Default OFF
     const [userData, setUserData] = useState({ name: 'User', email: 'N/A', id: 'N/A', ip: '0.0.0.0' });
     const [watermarkTime, setWatermarkTime] = useState(new Date().toLocaleTimeString());
 
     const [lastFocusTime, setLastFocusTime] = useState(Date.now());
 
     const triggerViolation = useCallback((reason: string) => {
+        if (!isActive) return; // Ignore if not active
         console.error(`🚨 SECURITY VIOLATION: ${reason}`);
         setIsTampered(true);
-        document.body.classList.add('security-locked');
+        document.body.classList.add('security-locked', 'security-locked-blank');
 
         // Pause all media
         document.querySelectorAll('video, audio').forEach(m => {
             try { (m as any).pause(); } catch (e) { }
         });
-    }, []);
+    }, [isActive]);
 
     const fetchIP = async () => {
         try {
@@ -39,6 +41,21 @@ const SecurityLayer: React.FC = () => {
         }));
         fetchIP();
 
+        // Listen for activation events
+        const handleEnable = () => {
+            console.log("🛡️ REACT SECURITY: ENABLED");
+            setIsActive(true);
+        };
+        const handleDisable = () => {
+            console.log("🔓 REACT SECURITY: DISABLED");
+            setIsActive(false);
+            setIsTampered(false);
+            document.body.classList.remove('security-locked', 'security-blur');
+        };
+
+        window.addEventListener('efv-enable-security', handleEnable);
+        window.addEventListener('efv-disable-security', handleDisable);
+
         // Watermark interval
         const wmTimer = setInterval(() => {
             setWatermarkTime(new Date().toLocaleTimeString());
@@ -46,6 +63,7 @@ const SecurityLayer: React.FC = () => {
 
         // Visibility handling
         const handleVisibility = () => {
+            if (!isActive) return;
             if (document.visibilityState === 'hidden') {
                 document.body.classList.add('security-blur');
             } else if (!isTampered) {
@@ -54,14 +72,16 @@ const SecurityLayer: React.FC = () => {
         };
 
         const handleBlur = () => {
+            if (!isActive) return;
             setLastFocusTime(Date.now());
             document.body.classList.add('security-blur');
         };
         const handleFocus = () => {
+            if (!isActive) return;
             const now = Date.now();
             const gap = now - lastFocusTime;
 
-            if (gap < 800 && gap > 50) {
+            if (gap < 800 && gap > 100) { // Slight buffer increase
                 triggerViolation("Rapid Focus Loss/Return (Possible Snipping Tool)");
             }
 
@@ -70,16 +90,20 @@ const SecurityLayer: React.FC = () => {
 
         // Interaction blocking
         const handleContextMenu = (e: MouseEvent) => {
+            if (!isActive) return;
             e.preventDefault();
             triggerViolation("Right Click Attempted");
         };
         const handleCopy = (e: ClipboardEvent) => {
+            if (!isActive) return;
             e.preventDefault();
             triggerViolation("Copy attempt");
         };
 
         // Shortcuts
         const handleKeyDown = (e: KeyboardEvent) => {
+            if (!isActive) return;
+
             const isInspect = (e.key === 'F12') ||
                 (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
                 (e.ctrlKey && e.key === 'u');
@@ -102,6 +126,7 @@ const SecurityLayer: React.FC = () => {
 
             if (isPrintScreen || isAltPrintScreen || isWinSnippet) {
                 e.preventDefault();
+                document.body.classList.add('security-blur'); // Instant blanking
                 triggerViolation(`Screen Capture Shortcut Detected (${e.key})`);
             }
         };
@@ -110,22 +135,24 @@ const SecurityLayer: React.FC = () => {
         if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
             const originalGetDisplayMedia = navigator.mediaDevices.getDisplayMedia.bind(navigator.mediaDevices);
             navigator.mediaDevices.getDisplayMedia = (constraints) => {
-                triggerViolation("Unauthorized screen capture request");
-                return Promise.reject(new Error("Security Policy Violation"));
+                if (isActive) {
+                    triggerViolation("Unauthorized screen capture request");
+                    return Promise.reject(new Error("Security Policy Violation"));
+                }
+                return originalGetDisplayMedia(constraints);
             };
         }
 
         // Mouse detection
         const handleMouseLeave = () => {
+            if (!isActive) return;
             triggerViolation("Cursor Left Window Boundary");
-        };
-        const handleMouseEnter = () => {
-            // Red Alert already active or not needed
         };
 
         // Resize detection
         let lastSize = { w: window.innerWidth, h: window.innerHeight };
         const handleResize = () => {
+            if (!isActive) return;
             const dw = Math.abs(window.innerWidth - lastSize.w);
             const dh = Math.abs(window.innerHeight - lastSize.h);
             if (dw > 5 || dh > 5) {
@@ -136,7 +163,7 @@ const SecurityLayer: React.FC = () => {
 
         // Aggressive Polling
         const pollingTimer = setInterval(() => {
-            if (!document.hasFocus() && !isTampered) {
+            if (isActive && !document.hasFocus() && !isTampered) {
                 triggerViolation("Focus Polling (Lost)");
             }
         }, 50);
@@ -146,7 +173,6 @@ const SecurityLayer: React.FC = () => {
         window.addEventListener('blur', handleBlur);
         window.addEventListener('focus', handleFocus);
         window.addEventListener('mouseleave', handleMouseLeave);
-        window.addEventListener('mouseenter', handleMouseEnter);
         window.addEventListener('resize', handleResize);
         window.addEventListener('contextmenu', handleContextMenu);
         document.addEventListener('copy', handleCopy);
@@ -155,17 +181,18 @@ const SecurityLayer: React.FC = () => {
         return () => {
             clearInterval(wmTimer);
             clearInterval(pollingTimer);
+            window.removeEventListener('efv-enable-security', handleEnable);
+            window.removeEventListener('efv-disable-security', handleDisable);
             window.removeEventListener('visibilitychange', handleVisibility);
             window.removeEventListener('blur', handleBlur);
             window.removeEventListener('focus', handleFocus);
             window.removeEventListener('mouseleave', handleMouseLeave);
-            window.removeEventListener('mouseenter', handleMouseEnter);
             window.removeEventListener('resize', handleResize);
             window.removeEventListener('contextmenu', handleContextMenu);
             document.removeEventListener('copy', handleCopy);
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, [isTampered, triggerViolation]);
+    }, [isTampered, triggerViolation, isActive, lastFocusTime]);
 
     // Watermark grid
     const renderWatermarks = () => {
@@ -188,9 +215,11 @@ const SecurityLayer: React.FC = () => {
 
     return (
         <>
-            <div id="security-watermark-container">
-                {renderWatermarks()}
-            </div>
+            {isActive && (
+                <div id="security-watermark-container">
+                    {renderWatermarks()}
+                </div>
+            )}
 
             <div id="security-shield" style={{
                 position: 'fixed',

@@ -28,8 +28,11 @@ const SecureReader: React.FC<SecureReaderProps> = ({ fileUrl, userEmail, product
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [isReady, setIsReady] = useState(false); // Blocks saving until initial check
 
-    // Security: Disable Right-click, Copy, Print
+    // Security: Toggle Global Security Layer & Disable local Right-click/Shortcuts
     useEffect(() => {
+        // Enable Security
+        window.dispatchEvent(new CustomEvent('efv-enable-security'));
+
         const handleContextMenu = (e: MouseEvent) => e.preventDefault();
         const handleKeyDown = (e: KeyboardEvent) => {
             // Disable Ctrl+P, Ctrl+S, Ctrl+C, Ctrl+U, F12
@@ -45,6 +48,8 @@ const SecureReader: React.FC<SecureReaderProps> = ({ fileUrl, userEmail, product
         window.addEventListener('keydown', handleKeyDown);
 
         return () => {
+            // Disable Security
+            window.dispatchEvent(new CustomEvent('efv-disable-security'));
             window.removeEventListener('contextmenu', handleContextMenu);
             window.removeEventListener('keydown', handleKeyDown);
         };
