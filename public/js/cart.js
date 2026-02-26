@@ -2115,7 +2115,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // API Login
-                const response = await fetch('http://localhost:5000/api/auth/login', {
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
@@ -2215,7 +2215,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 // API Signup (Updated to /register with phone)
-                const response = await fetch('http://localhost:5000/api/auth/register', {
+                const response = await fetch(`${API_BASE}/api/auth/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -2364,7 +2364,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setLoader(forgotEmailForm, true);
 
             try {
-                const res = await fetch('http://localhost:5000/api/auth/forgot-password', {
+                const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email })
@@ -2398,7 +2398,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setLoader(forgotOtpForm, true);
 
             try {
-                const res = await fetch('http://localhost:5000/api/auth/verify-reset-otp', {
+                const res = await fetch(`${API_BASE}/api/auth/verify-reset-otp`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: resetSession.email, otp })
@@ -2443,7 +2443,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             setLoader(forgotResetForm, true);
             try {
-                const res = await fetch('http://localhost:5000/api/auth/reset-password', {
+                const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ resetToken: resetSession.token, newPassword: pass })
@@ -2481,7 +2481,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             showToast('Requesting new code...');
             try {
-                await fetch('http://localhost:5000/api/auth/forgot-password', {
+                await fetch(`${API_BASE}/api/auth/forgot-password`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: resetSession.email })
@@ -2651,7 +2651,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const res = await fetch('http://localhost:5000/api/users/profile', {
+            const res = await fetch(`${API_BASE}/api/users/profile`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {

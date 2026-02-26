@@ -3,7 +3,8 @@ class EFVChatbot {
     constructor() {
         this.isOpen = false;
         this.history = [];
-        this.apiUrl = 'http://localhost:5000/api/chat/message';
+        const base = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE_URL) ? CONFIG.API_BASE_URL : 'http://localhost:8080';
+        this.apiUrl = `${base}/api/chat/message`;
         this.init();
     }
 
