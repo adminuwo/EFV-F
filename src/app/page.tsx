@@ -1,11 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { AuthProvider } from '@/context/AuthContext';
-import LibraryDashboard from '@/components/Library/LibraryDashboard';
-import Marketplace from '@/components/Marketplace/Marketplace';
 import { useSecurity } from '@/hooks/useSecurity';
 import { Library, ShoppingBag } from 'lucide-react';
+
+// Dynamically import client components with SSR disabled to prevent 'DOMMatrix is not defined' errors
+const Marketplace = dynamic(() => import('@/components/Marketplace/Marketplace'), { ssr: false });
+const LibraryDashboard = dynamic(() => import('@/components/Library/LibraryDashboard'), { ssr: false });
 
 function AppContent() {
   useSecurity(); // Activate global security blockers
