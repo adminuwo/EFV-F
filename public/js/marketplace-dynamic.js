@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const API_BASE = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE_URL)
         ? CONFIG.API_BASE_URL
-        : 'http://localhost:5000';
+        : 'http://localhost:8080';
 
     // Step 1: Render static products IMMEDIATELY
     renderProducts(STATIC_PRODUCTS);

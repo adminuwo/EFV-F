@@ -363,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let cart = JSON.parse(localStorage.getItem(getUserKey('efv_cart'))) || [];
 
 
-    const API_BASE = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE_URL) ? CONFIG.API_BASE_URL : 'http://localhost:5000';
+    const API_BASE = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE_URL) ? CONFIG.API_BASE_URL : 'http://localhost:8080';
 
     async function syncLibraryWithBackend() {
         const user = JSON.parse(localStorage.getItem('efv_user'));
@@ -1085,7 +1085,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                 }
 
-                const imgUrl = item.thumbnail ? (item.thumbnail.startsWith('http') ? item.thumbnail : (window.API_BASE || 'http://localhost:5000') + (item.thumbnail.startsWith('/') ? '' : '/') + item.thumbnail) : 'img/placeholder.png';
+                const imgUrl = item.thumbnail ? (item.thumbnail.startsWith('http') ? item.thumbnail : (window.API_BASE || `${API_BASE}`) + (item.thumbnail.startsWith('/') ? '' : '/') + item.thumbnail) : 'img/placeholder.png';
 
                 return `
                 <div style="background: rgba(255, 211, 105, 0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255, 211, 105, 0.1); display: flex; gap: 15px; align-items: center; transition: all 0.3s; margin-bottom: 10px;">
@@ -1329,7 +1329,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (user && user.email && item && item.id) {
                     try {
                         const demoToken = btoa(user.email);
-                        const res = await fetch(`http://localhost:5000/api/demo/progress/${item.id}`, {
+                        const res = await fetch(`${API_BASE}/api/demo/progress/${item.id}`, {
                             headers: { 'Authorization': `Bearer ${demoToken}` }
                         });
                         const data = await res.json();
@@ -1407,7 +1407,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const productId = item ? item.id : null;
 
                         if (productId) {
-                            const res = await fetch(`http://localhost:5000/api/demo/progress/${productId}`, {
+                            const res = await fetch(`${API_BASE}/api/demo/progress/${productId}`, {
                                 headers: { 'Authorization': `Bearer ${demoToken}` }
                             });
                             const data = await res.json();
@@ -1471,7 +1471,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (user && user.email && library[index].id) {
                 try {
                     const demoToken = btoa(user.email);
-                    await fetch('http://localhost:5000/api/demo/progress', {
+                    await fetch(`${API_BASE}/api/demo/progress`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -1520,7 +1520,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (productId) {
                     const demoToken = btoa(user.email);
                     console.log(`📤 Syncing to backend: ${productId} -> Page ${page}`);
-                    const res = await fetch('http://localhost:5000/api/demo/progress', {
+                    const res = await fetch(`${API_BASE}/api/demo/progress`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -2070,7 +2070,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 // Admin Credentials Check (API Auth for real token)
                 if (email === 'admin@uwo24.com' && password === 'uwo@1234') {
-                    const adminRes = await fetch('http://localhost:5000/api/auth/login', {
+                    const adminRes = await fetch(`${API_BASE}/api/auth/login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email, password })

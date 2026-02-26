@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:5000';
+const API_BASE = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE_URL) ? CONFIG.API_BASE_URL : 'http://localhost:8080';
 
 document.addEventListener('DOMContentLoaded', () => {
     const user = JSON.parse(localStorage.getItem('efv_user'));
