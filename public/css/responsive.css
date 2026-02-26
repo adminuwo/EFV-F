@@ -351,6 +351,14 @@
         max-width: 350px;
     }
 
+    /* Disable hover transforms on mobile to prevent overlapping/shifting */
+    .btn-gold:hover,
+    .btn-outline:hover,
+    .glass-panel:hover {
+        transform: none !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+    }
+
     .nav-actions .btn {
         width: auto !important;
         padding: 5px 12px !important;
