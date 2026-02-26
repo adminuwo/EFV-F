@@ -1492,7 +1492,40 @@ body.dashboard-body {
     }
 
     .content-header h1 {
-        font-size: 1.5rem;
+        font-size: 1.4rem;
+    }
+
+    .content-header p {
+        font-size: 0.8rem;
+    }
+
+    .stat-value {
+        font-size: 1.4rem;
+    }
+
+    .stat-info h3 {
+        font-size: 0.75rem;
+    }
+
+    .card-title {
+        font-size: 0.95rem;
+    }
+
+    .card-subtitle {
+        font-size: 0.75rem;
+    }
+
+    .card-price {
+        font-size: 1rem;
+    }
+
+    .order-title {
+        font-size: 1rem;
+    }
+
+    .order-date,
+    .order-id {
+        font-size: 0.7rem;
     }
 
     .admin-kpi-grid {
@@ -1505,6 +1538,10 @@ body.dashboard-body {
 
     .settings-card {
         padding: 15px !important;
+    }
+
+    .settings-header h3 {
+        font-size: 1.1rem;
     }
 
     .admin-table th,

@@ -31,7 +31,7 @@
     }
 
     h1 {
-        font-size: clamp(2.5rem, 10vw, 5rem) !important;
+        font-size: clamp(2.2rem, 8vw, 4rem) !important;
     }
 }
 
@@ -102,9 +102,9 @@
     }
 
     .nav-links a {
-        font-size: 1.15rem !important;
+        font-size: 1.05rem !important;
         font-weight: 700 !important;
-        letter-spacing: 2px !important;
+        letter-spacing: 1.5px !important;
         color: var(--white-text) !important;
         padding: 10px 0 !important;
         width: 100%;
@@ -398,8 +398,8 @@
     }
 
     .carousel-track>.glass-panel h3 {
-        font-size: 1.2rem !important;
-        margin-bottom: 10px !important;
+        font-size: 1.1rem !important;
+        margin-bottom: 8px !important;
         min-height: unset !important;
     }
 
@@ -457,8 +457,8 @@
     }
 
     .blog-title {
-        font-size: 1.25rem !important;
-        margin-bottom: 10px !important;
+        font-size: 1.15rem !important;
+        margin-bottom: 8px !important;
     }
 
     /* Sacred Geometry scale down */
@@ -496,23 +496,24 @@
     }
 
     .logo span {
-        font-size: 0.65rem;
+        font-size: 0.6rem;
     }
 
     .hero-content h1 {
-        font-size: clamp(1.8rem, 12vw, 3rem) !important;
+        font-size: clamp(1.6rem, 10vw, 2.5rem) !important;
         line-height: 1.2 !important;
         text-wrap: balance;
     }
 
     .section h2 {
-        font-size: 1.5rem !important;
-        margin-bottom: 10px !important;
+        font-size: 1.35rem !important;
+        margin-bottom: 8px !important;
     }
 
     .section p {
         margin-top: 5px !important;
         margin-bottom: 15px !important;
+        font-size: 0.9rem !important;
     }
 
     .wave-underline {
@@ -553,13 +554,13 @@
     }
 
     .product-info h3 {
-        font-size: 0.95rem !important;
-        line-height: 1.2 !important;
+        font-size: 0.9rem !important;
+        line-height: 1.1 !important;
     }
 
     .price {
-        font-size: 1.2rem !important;
-        margin-bottom: 10px !important;
+        font-size: 1.1rem !important;
+        margin-bottom: 8px !important;
     }
 
     /* Shorten carousel cards even more on tiny screens */
