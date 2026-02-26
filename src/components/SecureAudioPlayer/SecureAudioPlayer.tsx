@@ -44,7 +44,8 @@ const SecureAudioPlayer: React.FC<SecureAudioPlayerProps> = ({ streamUrl, title,
                 const token = JSON.parse(localStorage.getItem('efv_auth_user') || '{}').token;
                 if (!token) return;
 
-                const { data } = await axios.get(`http://localhost:5000/api/library/progress/${productId}`, {
+                const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://efv-b.onrender.com';
+                const { data } = await axios.get(`${API_URL}/api/library/progress/${productId}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
 
@@ -68,7 +69,8 @@ const SecureAudioPlayer: React.FC<SecureAudioPlayerProps> = ({ streamUrl, title,
             if (!authStr) return;
             const token = JSON.parse(authStr).token;
 
-            await axios.post('http://localhost:5000/api/library/progress', {
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://efv-b.onrender.com';
+            await axios.post(`${API_URL}/api/library/progress`, {
                 productId,
                 progress: pos,
                 total: audioRef.current?.duration || 0

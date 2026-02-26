@@ -68,7 +68,7 @@ const SecureReader: React.FC<SecureReaderProps> = ({ fileUrl, userEmail, product
                 const token = JSON.parse(authStr).token;
 
                 // Use simple relative path or environment variable in production
-                const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+                const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://efv-b.onrender.com';
 
                 const { data } = await axios.get(`${API_URL}/api/library/progress/${productId}`, {
                     headers: { Authorization: `Bearer ${token}` }

@@ -27,7 +27,8 @@ const LibraryDashboard = () => {
 
         const fetchLibraryData = async () => {
             try {
-                const { data: libraryItems } = await axios.get('http://localhost:5000/api/library/my-library', {
+                const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://efv-b.onrender.com';
+                const { data: libraryItems } = await axios.get(`${API_URL}/api/library/my-library`, {
                     headers: { Authorization: `Bearer ${user.token}` }
                 });
                 setItems(libraryItems);
@@ -36,7 +37,7 @@ const LibraryDashboard = () => {
                 const progressMap: Record<string, any> = {};
                 await Promise.all(libraryItems.map(async (item: Product) => {
                     try {
-                        const { data } = await axios.get(`http://localhost:5000/api/library/progress/${item._id}`, {
+                        const { data } = await axios.get(`${API_URL}/api/library/progress/${item._id}`, {
                             headers: { Authorization: `Bearer ${user.token}` }
                         });
                         if (data && data.progress > 0) {
@@ -92,14 +93,14 @@ const LibraryDashboard = () => {
                     >
                         {activeItem.type === 'EBOOK' ? (
                             <SecureReader
-                                fileUrl={`http://localhost:5000/api/content/ebook/${activeItem._id}`}
+                                fileUrl={`${process.env.NEXT_PUBLIC_API_URL || 'https://efv-b.onrender.com'}/api/content/ebook/${activeItem._id}`}
                                 userEmail={user.email}
                                 productId={activeItem._id}
                             />
                         ) : (
                             <div className="flex justify-center p-12">
                                 <SecureAudioPlayer
-                                    streamUrl={`http://localhost:5000/api/content/audio/${activeItem._id}`}
+                                    streamUrl={`${process.env.NEXT_PUBLIC_API_URL || 'https://efv-b.onrender.com'}/api/content/audio/${activeItem._id}`}
                                     title={activeItem.title}
                                     productId={activeItem._id}
                                 />
