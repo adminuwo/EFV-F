@@ -41,7 +41,7 @@ const Marketplace = () => {
     const fetchLibrary = async () => {
         try {
             const { data } = await api.getMyLibrary();
-            const ids = new Set(data.map((item: Product) => item._id));
+            const ids = new Set<string>(data.map((item: Product) => item._id));
             setLibraryItems(ids);
         } catch (error) {
             console.error('Error fetching library:', error);
@@ -113,8 +113,8 @@ const Marketplace = () => {
                                 onClick={() => handleAddToLibrary(product._id)}
                                 disabled={inLibrary || isAdding}
                                 className={`w-full py-3 px-6 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${inLibrary
-                                        ? 'bg-green-600/20 text-green-400 border border-green-600/30 cursor-not-allowed'
-                                        : 'bg-gold-energy text-black hover:bg-gold-energy/90 active:scale-95'
+                                    ? 'bg-green-600/20 text-green-400 border border-green-600/30 cursor-not-allowed'
+                                    : 'bg-gold-energy text-black hover:bg-gold-energy/90 active:scale-95'
                                     }`}
                             >
                                 {isAdding ? (
