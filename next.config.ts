@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/',
-        destination: '/efvweb/index.html',
+        destination: '/index.html',
       },
     ];
   },
