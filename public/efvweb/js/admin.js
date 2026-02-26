@@ -1,7 +1,7 @@
 // Integrated with global security.js
 console.log("📂 admin.js: Loading Version 1.2 (Active)...");
 
-const API_BASE = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE_URL) ? CONFIG.API_BASE_URL : 'http://localhost:5000';
+const API_BASE = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE_URL) ? CONFIG.API_BASE_URL : 'http://localhost:8080';
 let allAdminProducts = [];
 
 // User Data Isolation Helpers
