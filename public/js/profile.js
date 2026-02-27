@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = JSON.parse(localStorage.getItem('efv_user'));
 
     if (!user) {
-        window.location.href = 'marketplace.html';
+        window.location.href = 'index.html';
         return;
     }
 
@@ -98,28 +98,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const sideNav = document.querySelector('.sidebar-nav');
 
     if (dashHamb && sideNav) {
-        // Clear existing to avoid double binding if script re-runs
-        const newDashHamb = dashHamb.cloneNode(true);
-        dashHamb.parentNode.replaceChild(newDashHamb, dashHamb);
-
-        newDashHamb.addEventListener('click', (e) => {
+        // Direct listener — no cloneNode to avoid losing onclick attrs or double binds
+        dashHamb.addEventListener('click', function (e) {
             e.stopPropagation();
-            newDashHamb.classList.toggle('active');
+            this.classList.toggle('active');
             sideNav.classList.toggle('active');
+            console.log('🍔 Hamburger clicked! Nav active:', sideNav.classList.contains('active'));
         });
 
         // Close menu when clicking a nav item
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', () => {
-                newDashHamb.classList.remove('active');
+                dashHamb.classList.remove('active');
                 sideNav.classList.remove('active');
             });
         });
 
         // Close menu when clicking outside
         document.addEventListener('click', (e) => {
-            if (!sideNav.contains(e.target) && !newDashHamb.contains(e.target)) {
-                newDashHamb.classList.remove('active');
+            if (!sideNav.contains(e.target) && !dashHamb.contains(e.target)) {
+                dashHamb.classList.remove('active');
                 sideNav.classList.remove('active');
             }
         });
@@ -825,28 +823,45 @@ window.markAllNotificationsRead = async function () {
 window.deleteNotification = async function (event, id) {
     if (event) event.stopPropagation(); // Prevent marking as read
 
-    if (!confirm('Are you sure you want to delete this notification?')) return;
+    console.log(`🗑️ Delete button clicked for ID: ${id}`);
+
+    // Optimistic UI: Remove from screen immediately
+    const noteElement = event.target.closest('.notification-item');
+    if (noteElement) {
+        noteElement.style.transition = 'all 0.4s ease';
+        noteElement.style.opacity = '0';
+        noteElement.style.transform = 'translateX(50px)';
+        setTimeout(() => noteElement.remove(), 400);
+    }
 
     try {
         console.log(`📤 Sending DELETE request for notification: ${id}`);
         const token = localStorage.getItem('authToken');
         const res = await fetch(`${API_BASE}/api/users/notifications/${id}`, {
             method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
         });
 
         const data = await res.json();
+        console.log("📥 Server response:", data);
 
         if (res.ok) {
-            showToast(data.message || 'Notification deleted', 'success');
-            await fetchProfileData();
+            // Success - profile data refresh in background to keep state in sync
+            // but no need to showing toast if it feels like a chore
+            console.log("Successfully deleted from server");
         } else {
-            console.error("Delete fail:", data);
-            showToast(data.message || 'Failed to delete notification', 'error');
+            console.error(`Delete fail (${res.status}):`, data);
+            showToast(data.message || `Failed to delete from server`, 'error');
+            // Re-fetch to bring back the item if it failed
+            fetchProfileData();
         }
     } catch (e) {
         console.error("Delete notification error:", e);
-        showToast('System error', 'error');
+        // Re-fetch to bring back the item if it failed
+        fetchProfileData();
     }
 }
 

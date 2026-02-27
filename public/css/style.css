@@ -676,6 +676,17 @@ nav .container {
     z-index: 1;
 }
 
+/* Remove transition on touch/mobile to prevent tap-hover flash */
+@media (hover: none),
+(max-width: 768px) {
+
+    .btn,
+    .btn-gold,
+    .btn-outline {
+        transition: none !important;
+    }
+}
+
 .btn-gold {
     background: linear-gradient(135deg, var(--gold-dim) 0%, var(--gold-energy) 50%, var(--gold-dim) 100%);
     background-size: 200% auto;
@@ -684,27 +695,14 @@ nav .container {
     border: none;
 }
 
-.btn-gold:hover {
-    background-position: right center;
-    box-shadow: 0 12px 35px rgba(255, 211, 105, 0.5);
-    transform: translateY(-4px) scale(1.02);
-}
+/* Hover only on real pointer/mouse devices */
+/* Button hover effects removed as per requirement */
 
 .btn-outline {
     border: 1.5px solid var(--gold-energy);
     color: var(--gold-energy);
-    /* Matches the golden text in the user snapshot */
     background: rgba(255, 255, 255, 0.03);
     backdrop-filter: blur(10px);
-}
-
-.btn-outline:hover {
-    background: linear-gradient(135deg, var(--gold-dim) 0%, var(--gold-energy) 50%, var(--gold-dim) 100%);
-    background-size: 200% auto;
-    color: var(--cosmic-black);
-    border-color: transparent;
-    transform: translateY(-4px) scale(1.02);
-    box-shadow: 0 12px 35px rgba(255, 211, 105, 0.5);
 }
 
 .btn-outline.active {
@@ -2714,5 +2712,96 @@ body.modal-open {
     100% {
         transform: scale(1) rotate(0deg);
         opacity: 1;
+    }
+}
+
+/* ============================================
+   MOBILE: DISABLE ALL HOVER EFFECTS
+   ============================================ */
+@media (max-width: 768px) {
+
+    .btn-gold:hover,
+    .btn-outline:hover,
+    .btn:hover,
+    .btn-view-info:hover,
+    .detail-btn-buy:hover,
+    .waitlist-form .btn:hover {
+        transform: none !important;
+        box-shadow: none !important;
+        background-position: unset !important;
+        filter: none !important;
+    }
+
+    .glass-panel:hover,
+    .glass-panel:hover::after,
+    .market-product-card:hover,
+    .market-product-card:hover .market-cover-box img,
+    .blog-card:hover,
+    .blog-card:hover::before,
+    .blog-card:hover .blog-image,
+    .blog-card:hover .blog-image-wrapper::after,
+    .blog-card:hover .blog-title,
+    .blog-card:hover .blog-content,
+    .blog-card:hover .blog-excerpt,
+    .blog-card:hover .blog-category,
+    .static-feature-card:hover,
+    .static-feature-card:hover .glow-circle {
+        transform: none !important;
+        box-shadow: none !important;
+        filter: none !important;
+        opacity: unset !important;
+    }
+
+    .social-icon-link:hover,
+    .social-icon-link:hover img,
+    .social-icon-link:hover::before,
+    .social-icon-link:hover::after {
+        transform: none !important;
+        box-shadow: none !important;
+        width: 0 !important;
+        opacity: 0 !important;
+    }
+
+    .logo:hover,
+    .logo:hover::before {
+        transform: none !important;
+        letter-spacing: unset !important;
+        filter: none !important;
+        opacity: 0 !important;
+    }
+
+    .nav-links a:hover,
+    .nav-links a:hover::before,
+    .nav-links a:hover::after {
+        transform: none !important;
+        text-shadow: none !important;
+        width: 0 !important;
+    }
+
+    .footer-links a:hover {
+        transform: none !important;
+        color: var(--gold-energy) !important;
+    }
+
+    .footer-links a:hover::before {
+        width: 0 !important;
+    }
+
+    .carousel-nav:hover {
+        background: var(--glass-bg) !important;
+        color: var(--gold-energy) !important;
+        box-shadow: none !important;
+    }
+
+    .preview-video-container:hover {
+        transform: none !important;
+        box-shadow: none !important;
+    }
+}
+
+@media (hover: none) and (pointer: coarse) {
+    *:hover {
+        transform: none !important;
+        box-shadow: none !important;
     }
 }

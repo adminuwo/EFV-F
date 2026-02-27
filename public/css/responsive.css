@@ -126,8 +126,8 @@
 
     /* Force visibility of hamburger spans */
     .hamburger span {
-        background: #FFC107 !important;
-        box-shadow: 0 0 10px rgba(255, 193, 7, 0.4) !important;
+        background: #FFD369 !important;
+        box-shadow: 0 0 12px rgba(255, 211, 105, 0.45) !important;
         opacity: 1 !important;
     }
 
@@ -268,13 +268,11 @@
         gap: 30px !important;
     }
 
-    /* Card sizing constraints to prevent huge cards */
-    .glass-panel {
+    /* Card sizing constraints to prevent huge cards - Don't apply to sidebar */
+    .glass-panel:not(.sidebar) {
         padding: 20px;
         max-width: 400px;
-        /* Constrain card width */
         margin: 0 auto;
-        /* Center cards */
         width: 100%;
     }
 
@@ -342,13 +340,20 @@
 
     .hero-btns {
         flex-direction: column !important;
+        align-items: center !important;
         width: 100%;
-        gap: 15px !important;
+        gap: 12px !important;
     }
 
-    .btn {
-        width: 100%;
-        max-width: 350px;
+    /* Hero buttons only — don't affect nav buttons */
+    .hero-btns .btn {
+        padding: 10px 28px !important;
+        font-size: 0.78rem !important;
+        letter-spacing: 1px !important;
+        line-height: 1.3 !important;
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
     }
 
     /* Disable hover transforms on mobile to prevent overlapping/shifting */
@@ -361,6 +366,8 @@
 
     .nav-actions .btn {
         width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
         padding: 5px 12px !important;
         font-size: 0.7rem !important;
         margin-right: 0 !important;
@@ -663,7 +670,19 @@
 
 @media (max-width: 768px) {
     .content-header h1 {
-        font-size: 1.8rem !important;
+        font-size: 1.5rem !important;
+    }
+
+    .content-header p {
+        font-size: 0.8rem !important;
+    }
+
+    .stat-value {
+        font-size: 1.4rem !important;
+    }
+
+    .stat-info h3 {
+        font-size: 0.8rem !important;
     }
 
     .admin-kpi-grid {
@@ -686,6 +705,28 @@
 }
 
 @media (max-width: 480px) {
+
+    /* Dashboard text size - mobile small */
+    .content-header h1 {
+        font-size: 1.2rem !important;
+    }
+
+    .content-header p {
+        font-size: 0.75rem !important;
+    }
+
+    .stat-value {
+        font-size: 1.3rem !important;
+    }
+
+    .stat-info h3 {
+        font-size: 0.75rem !important;
+    }
+
+    .stat-card {
+        padding: 15px !important;
+    }
+
     .admin-kpi-grid .stat-card {
         padding: 15px !important;
     }
@@ -741,15 +782,123 @@
     border-radius: 4px;
 }
 
+.hamburger.active {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+.hamburger.active span {
+    position: absolute !important;
+    margin: 0 !important;
+    transition: all 0.4s ease !important;
+}
+
 .hamburger.active span:nth-child(1) {
-    transform: rotate(45deg) translate(5px, 6px);
+    transform: rotate(0deg) !important;
 }
 
 .hamburger.active span:nth-child(2) {
-    opacity: 0;
-    transform: translateX(-10px);
+    transform: rotate(60deg) !important;
+    opacity: 1 !important;
 }
 
 .hamburger.active span:nth-child(3) {
-    transform: rotate(-45deg) translate(5px, -6px);
+    transform: rotate(-60deg) !important;
+}
+
+/* =====================================================
+   MOBILE: DISABLE ALL HOVER ANIMATIONS
+   Touch devices don't have hover — remove all effects
+   ===================================================== */
+
+/* Real touch devices (phones, tablets) */
+@media (hover: none) and (pointer: coarse) {
+    *:hover {
+        transform: none !important;
+        box-shadow: none !important;
+        filter: none !important;
+        background-color: unset !important;
+        color: unset !important;
+        border-color: unset !important;
+        opacity: 1 !important;
+        text-shadow: none !important;
+        letter-spacing: unset !important;
+    }
+
+    /* Keep active/focus styles but remove hover */
+    .btn-gold:hover,
+    .btn-outline:hover,
+    .btn:hover {
+        transform: none !important;
+        box-shadow: none !important;
+        filter: none !important;
+    }
+
+    .glass-panel:hover,
+    .product-card:hover,
+    .stat-card:hover,
+    .dashboard-card:hover,
+    .nav-item:hover,
+    .social-icon-link:hover,
+    .mini-product-card:hover,
+    .settings-card:hover,
+    .order-card:hover,
+    .static-feature-card:hover,
+    .flip-card:hover .flip-inner {
+        transform: none !important;
+        box-shadow: none !important;
+        border-color: unset !important;
+        background: unset !important;
+    }
+
+    /* Remove magnetic/float animations on hover */
+    .magnetic:hover,
+    .float-ethereal:hover,
+    .shine-box:hover,
+    .shine-hover:hover {
+        transform: none !important;
+        animation: none !important;
+    }
+
+    /* Remove link hover underlines/colors */
+    a:hover {
+        color: unset !important;
+        text-shadow: none !important;
+    }
+}
+
+/* Responsive view (Chrome DevTools mobile emulation) */
+@media (max-width: 768px) {
+
+    /* Disable ALL hover transform effects */
+    *:hover {
+        transform: none !important;
+    }
+
+    .btn-gold:hover,
+    .btn-outline:hover,
+    .btn:hover,
+    .glass-panel:hover,
+    .product-card:hover,
+    .stat-card:hover,
+    .dashboard-card:hover,
+    .settings-card:hover,
+    .order-card:hover,
+    .mini-product-card:hover,
+    .static-feature-card:hover,
+    .magnetic:hover,
+    .shine-box:hover,
+    .shine-hover:hover,
+    .social-icon-link:hover img,
+    .social-icon-link img:hover {
+        transform: none !important;
+        box-shadow: none !important;
+        animation: none !important;
+    }
+
+    /* Keep hover color feedback for nav items (UX) but no movement */
+    .nav-item:hover {
+        transform: none !important;
+    }
 }

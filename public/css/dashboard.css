@@ -93,50 +93,73 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 6px;
+    gap: 6px !important;
     background: transparent !important;
     border: none !important;
     cursor: pointer;
-    padding: 0;
-    width: 35px;
-    height: 35px;
+    padding: 0 !important;
+    width: 35px !important;
+    min-width: 35px !important;
+    height: 35px !important;
+    min-height: 35px !important;
+    max-height: 35px !important;
     z-index: 10000;
     position: relative;
     opacity: 1 !important;
     visibility: visible !important;
+    flex-shrink: 0 !important;
 }
 
 .dashboard-hamburger span {
-    display: block;
-    width: 30px;
-    height: 3px;
+    display: block !important;
+    width: 30px !important;
+    height: 3px !important;
+    min-height: 3px !important;
+    max-height: 3px !important;
     /* Thicker lines for better visibility */
-    background: #FFC107 !important;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(255, 193, 7, 0.4) !important;
+    background: #FFD369 !important;
+    /* Brighter gold yellow */
+    border-radius: 10px !important;
+    box-shadow: 0 0 12px rgba(255, 211, 105, 0.45) !important;
     /* Stronger glow */
     transition: all 0.3s ease;
+    flex-shrink: 0 !important;
+}
+
+.dashboard-hamburger.active {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+.dashboard-hamburger.active span {
+    position: absolute !important;
+    margin: 0 !important;
+    transition: all 0.3s ease !important;
 }
 
 .dashboard-hamburger.active span:nth-child(1) {
-    transform: translateY(9px) rotate(45deg);
+    transform: rotate(0deg) !important;
 }
 
 .dashboard-hamburger.active span:nth-child(2) {
-    opacity: 0;
+    transform: rotate(60deg) !important;
+    opacity: 1 !important;
 }
 
 .dashboard-hamburger.active span:nth-child(3) {
-    transform: translateY(-9px) rotate(-45deg);
+    transform: rotate(-60deg) !important;
 }
 
+html,
 body.dashboard-body {
-    background: var(--dark-bg);
+    background: #030509 !important;
+    background-color: #030509 !important;
     color: white;
     font-family: 'Outfit', sans-serif;
     margin: 0;
     overflow-x: hidden !important;
-    background-image: radial-gradient(circle at 10% 20%, rgba(255, 215, 0, 0.05) 0%, transparent 40%);
+    background-image: radial-gradient(circle at 10% 20%, rgba(255, 215, 0, 0.05) 0%, transparent 40%) !important;
 }
 
 .dashboard-container {
@@ -269,11 +292,13 @@ body.dashboard-body {
     margin-left: var(--sidebar-width);
     padding: 40px 60px;
     overflow-y: auto;
+    background: #0a0a0a;
 }
 
 .content-section {
     display: none;
     animation: fadeIn 0.4s ease-out;
+    background: transparent;
 }
 
 .content-section.active {
@@ -787,6 +812,11 @@ body.dashboard-body {
         background: rgba(10, 10, 10, 0.98);
         border-bottom: 1px solid rgba(255, 211, 105, 0.15);
         overflow: visible;
+        /* CRITICAL: backdrop-filter creates a new containing block for position:fixed
+           children in Chrome/Safari, trapping the sidebar-nav inside the 60px header.
+           Remove it on mobile to fix hamburger menu. */
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
         /* Don't clip hamburger or nav */
     }
 
@@ -804,6 +834,8 @@ body.dashboard-body {
         align-items: center;
         width: 100%;
         position: relative;
+        background: #0a0a0a !important;
+        /* Force solid dark background */
     }
 
     .sidebar-header .logo img {
@@ -816,10 +848,16 @@ body.dashboard-body {
 
     .dashboard-hamburger {
         display: flex !important;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
         margin-left: auto;
-        margin-right: 10px;
+        margin-right: 15px;
         visibility: visible !important;
         opacity: 1 !important;
+        position: relative;
+        z-index: 10001;
     }
 
     .user-profile-sm {
@@ -832,16 +870,20 @@ body.dashboard-body {
         top: 60px;
         /* Adjust according to header height */
         left: -100%;
-        width: 100%;
+        width: 100% !important;
+        max-width: 100% !important;
         height: calc(100vh - 60px);
         background: rgba(10, 10, 10, 0.98);
         backdrop-filter: blur(20px);
+        display: flex !important;
         flex-direction: column;
         gap: 10px;
         padding: 40px 20px;
         transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         z-index: 999;
         overflow-y: auto;
+        overflow-x: hidden;
+        box-sizing: border-box;
     }
 
     .sidebar-nav.active,
@@ -890,6 +932,36 @@ body.dashboard-body {
     .main-content {
         margin-left: 0;
         padding: 20px 15px;
+        background: #030509 !important;
+        color: white !important;
+    }
+
+    .main-content * {
+        background-color: transparent !important;
+        color: white;
+    }
+
+    .main-content h1,
+    .main-content h2,
+    .main-content h3,
+    .main-content h4,
+    .main-content p,
+    .main-content span:not(.gold-text):not(.status-badge) {
+        color: white !important;
+    }
+
+    .main-content .glass-panel {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(255, 211, 105, 0.15) !important;
+    }
+
+    .main-content .btn-gold * {
+        color: #030509 !important;
+    }
+
+    .main-content .btn-gold {
+        background: var(--gold-gradient) !important;
+        color: #030509 !important;
     }
 
     .content-header {
@@ -1553,5 +1625,15 @@ body.dashboard-body {
     .btn.small {
         padding: 6px 10px;
         font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 768px) {
+
+    .main-content .total span,
+    .main-content .total b,
+    .main-content .gold-text,
+    .main-content h1 .gold-text {
+        color: #FFD700 !important;
     }
 }
