@@ -119,7 +119,12 @@ const LibraryDashboard = () => {
                         <div className="col-span-full py-40 text-center text-gray-700 border-2 border-dashed border-white/5 rounded-[3rem] flex flex-col items-center">
                             <Lock className="w-12 h-12 mb-4 opacity-10" />
                             <p className="font-bold tracking-widest uppercase mb-4">No Digital Assets Found</p>
-                            <button className="text-gold-energy hover:underline font-black text-xs tracking-widest uppercase">Visit Marketplace</button>
+                            <button
+                                onClick={() => window.location.href = '/marketplace.html'}
+                                className="text-gold-energy hover:underline font-black text-xs tracking-widest uppercase"
+                            >
+                                Visit Marketplace
+                            </button>
                         </div>
                     ) : (
                         items.map(product => {

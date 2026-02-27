@@ -151,6 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (targetId === 'dashboard') updateDashboardOverview();
             if (targetId === 'admin') updateAdminStats();
             if (targetId === 'library') syncLibraryWithBackend();
+            if (targetId === 'orders') renderOrdersTab();
             if (targetId === 'notifications') renderNotificationsTab();
             if (targetId === 'admin-orders') loadAdminOrdersFull();
             if (targetId === 'admin-products') loadAdminProductsFull();
@@ -932,33 +933,59 @@ async function renderOrdersTab(filter = 'all') {
         emptyState.classList.add('hidden');
 
         container.innerHTML = orders.map(order => {
-            const date = new Date(order.createdAt).toLocaleDateString();
-            const itemsList = order.items.map(p => p.title || p.name).join(', ');
-            const statusClass = `status-${order.status.toLowerCase()}`;
+            const date = new Date(order.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+            const statusClass = `status-${order.status.toLowerCase().replace(/\s/g, '-')}`;
+
+            // Format items as a professional list
+            const itemsHtml = order.items.map(item => `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.03);">
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="font-size: 0.9rem; font-weight: 600; color: #fff;">${item.title}</span>
+                        <span style="font-size: 0.72rem; opacity: 0.5; text-transform: uppercase; letter-spacing: 0.5px;">${item.type} • Qty: ${item.quantity}</span>
+                    </div>
+                    <span style="font-size: 0.85rem; font-weight: 700; color: var(--gold-text);">₹${item.price * item.quantity}</span>
+                </div>
+            `).join('');
 
             return `
-                <div class="glass-panel" style="padding: 25px; border-radius: 15px; margin-bottom: 20px;">
+                <div class="glass-panel fade-in" style="padding: 24px; border-radius: 18px; margin-bottom: 25px; border: 1px solid rgba(255,211,105,0.08); position: relative; overflow: hidden; background: linear-gradient(145deg, rgba(30,30,30,0.4) 0%, rgba(20,20,20,0.6) 100%);">
+                    <!-- Top Ribbon for Status -->
+                    <div style="position:absolute; top: 0; right: 0; padding: 6px 20px; border-bottom-left-radius: 12px; font-size: 0.65rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;" class="${statusClass}">
+                        ${order.status}
+                    </div>
+
                     <div style="display:flex; justify-content:space-between; align-items: flex-start; margin-bottom: 20px;">
                         <div>
-                            <span style="font-size: 0.8rem; opacity: 0.5;">Order ID</span>
-                            <h3 style="margin: 0; font-family: 'Cinzel'; color: var(--gold-text);">#${order.orderId}</h3>
-                            <p style="margin: 5px 0 0; font-size: 0.85rem; opacity: 0.6;">Placed on ${date}</p>
+                            <span style="font-size: 0.7rem; opacity: 0.4; letter-spacing: 1px; text-transform: uppercase; display:block; margin-bottom: 4px;">Order Tracking ID</span>
+                            <h3 style="margin: 0; font-family: 'Cinzel'; color: var(--gold-text); font-size: 1.2rem; filter: drop-shadow(0 0 10px rgba(212,175,55,0.1));">#${order.orderId}</h3>
+                            <p style="margin: 8px 0 0; font-size: 0.8rem; opacity: 0.5;"><i class="far fa-calendar-alt"></i> ${date}</p>
                         </div>
-                        <div style="text-align: right;">
-                            <span class="status-badge ${statusClass}">${order.status}</span>
-                            <h3 style="margin: 10px 0 0; color: var(--gold-text);">₹${order.totalAmount}</h3>
+                        <div style="text-align: right; padding-top: 15px;">
+                            <span style="font-size: 0.7rem; opacity: 0.4; display:block; margin-bottom: 4px;">TOTAL AMOUNT</span>
+                            <h2 style="margin: 0; color: #fff; font-weight: 800;">₹${order.totalAmount.toLocaleString()}</h2>
                         </div>
                     </div>
                     
-                    <div style="display: flex; gap: 20px; align-items: center; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 10px;">
-                        <div style="flex: 1;">
-                            <p style="margin: 0; font-size: 0.9rem; font-weight: 600;">${itemsList}</p>
-                            <p style="margin: 5px 0 0; font-size: 0.8rem; opacity: 0.6;">${order.items.length} Items</p>
+                    <div style="padding: 15px 20px; background: rgba(0,0,0,0.2); border-radius: 14px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.03);">
+                        <div style="margin-bottom: 10px; opacity: 0.4; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px;">ORDERED ITEMS (${order.items.length})</div>
+                        <div style="max-height: 200px; overflow-y: auto;">
+                            ${itemsHtml}
                         </div>
-                        <div style="display: flex; gap: 10px;">
-                            <button class="btn btn-outline small" onclick="viewOrderDetail('${order._id}')">Details</button>
-                            ${order.status === 'Delivered' ? `<button class="btn btn-gold small">Invoice</button>` : ''}
-                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 12px; justify-content: flex-end; align-items: center;">
+                        <button class="btn btn-outline small" style="border-radius: 8px;" onclick="viewOrderDetail('${order._id}', 'details')">
+                           <i class="fas fa-list-ul" style="margin-right:6px;"></i> View Details
+                        </button>
+                        
+                        ${(order.status !== 'Cancelled' && order.status !== 'Failed') ? `
+                            <button class="btn btn-outline small" style="border-radius: 8px; border-color: rgba(255,211,105,0.3); color: var(--gold-text);" onclick="viewOrderDetail('${order._id}', 'track')">
+                                <i class="fas fa-truck-moving" style="margin-right:6px;"></i> Trace Order
+                            </button>
+                            <button class="btn btn-gold small" style="border-radius: 8px; box-shadow: 0 4px 15px rgba(212,175,55,0.2);" onclick="downloadInvoice('${order._id}')">
+                                <i class="fas fa-file-invoice" style="margin-right:6px;"></i> Invoice
+                            </button>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -2511,16 +2538,37 @@ if (document.getElementById('admin-product-form')) {
 
 // --- MISSING DASHBOARD FUNCTIONS ---
 
-window.viewOrderDetail = async function (id) {
+window.viewOrderDetail = async function (id, mode = 'details') {
     const modal = document.getElementById('order-detail-modal');
     if (!modal) return;
+
+    // Mode-based UI Reset (matches new compact HTML)
+    const topBarTitle = modal.querySelector('.reader-title');
+    const trackingPanel = document.getElementById('modal-tracking-panel');
+    const itemsPanel = document.getElementById('modal-order-items')?.closest('.glass-panel');
+    const paymentAddressRow = itemsPanel?.nextElementSibling; // The 2-col grid: payment + address
+
+    if (mode === 'track') {
+        // Track mode: Show tracking, hide items & payment/address sidebar
+        if (topBarTitle) topBarTitle.innerHTML = `<i class="fas fa-truck-moving gold-text"></i> LIVE TRACKING <span id="modal-order-id" style="color: rgba(255,211,105,0.8); margin-left: 10px; font-size: 0.75rem;"></span>`;
+        if (trackingPanel) trackingPanel.style.display = 'block';
+        if (itemsPanel) itemsPanel.style.display = 'none';
+        if (paymentAddressRow) paymentAddressRow.style.display = 'none';
+    } else {
+        // Details mode: Hide tracking, show items & payment/address
+        if (topBarTitle) topBarTitle.innerHTML = `<i class="fas fa-box-open gold-text"></i> ORDER DETAILS <span id="modal-order-id" style="color: rgba(255,211,105,0.8); margin-left: 10px; font-size: 0.75rem;"></span>`;
+        if (trackingPanel) trackingPanel.style.display = 'none';
+        if (itemsPanel) itemsPanel.style.display = 'block';
+        if (paymentAddressRow) paymentAddressRow.style.display = 'grid';
+    }
 
     try {
         const res = await fetch(`${API_BASE}/api/orders/track/${id}`);
         const order = await res.json();
         if (!res.ok) throw new Error(order.message);
 
-        document.getElementById('modal-order-id').textContent = `#${order.orderId}`;
+        const orderIdEl = document.getElementById('modal-order-id');
+        if (orderIdEl) orderIdEl.textContent = `#${order.orderId}`;
         const dateEl = document.getElementById('modal-order-date');
         if (dateEl) dateEl.textContent = `Placed on: ${new Date(order.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}`;
 
@@ -2551,14 +2599,26 @@ window.viewOrderDetail = async function (id) {
             </div>
         `).join('');
 
+        // Address Helper
+        const getDisplayAddress = (a) => {
+            if (!a) return 'No address provided';
+            if (typeof a.address === 'string') return a.address;
+            if (typeof a.address === 'object' && a.address !== null) {
+                const addrObj = a.address;
+                const parts = [addrObj.house, addrObj.area, addrObj.street, addrObj.landmark];
+                return parts.filter(Boolean).join(', ');
+            }
+            return 'No address provided';
+        };
+
         // Address
         const addr = order.customer;
         const addrContainer = document.getElementById('modal-shipping-address');
         if (addrContainer) {
             addrContainer.innerHTML = `
                 <strong style="color:white;">${addr.name}</strong><br>
-                ${addr.address}<br>
-                ${addr.city}, ${addr.zip}<br>
+                ${getDisplayAddress(addr)}<br>
+                ${addr.city || addr.address?.city || 'Unknown'}, ${addr.zip || addr.address?.pincode || '000000'}<br>
                 <span style="opacity:0.6;"><i class="fas fa-phone-alt" style="font-size:0.7rem;"></i> ${addr.phone}</span>
             `;
         }
@@ -2610,6 +2670,14 @@ window.viewOrderDetail = async function (id) {
 
         modal.style.display = 'flex';
         document.body.classList.add('modal-open');
+
+        // If in track mode, scroll to timeline and auto-refresh
+        if (mode === 'track') {
+            setTimeout(() => {
+                const refreshBtn = document.getElementById('refresh-track-btn');
+                if (refreshBtn) refreshBtn.click();
+            }, 300);
+        }
     } catch (e) {
         console.error("Error loading order:", e);
         showToast("Error loading order details", "error");
@@ -2619,6 +2687,159 @@ window.viewOrderDetail = async function (id) {
 window.closeOrderDetailModal = () => {
     document.getElementById('order-detail-modal').style.display = 'none';
     document.body.classList.remove('modal-open');
+};
+
+// --- TRACKING & INVOICE HELPERS ---
+window.downloadInvoice = async function (orderId) {
+    try {
+        const token = localStorage.getItem('authToken');
+        const res = await fetch(`${API_BASE}/api/orders/track/${orderId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const order = await res.json();
+        if (!res.ok) throw new Error(order.message);
+
+        // Robust jsPDF Constructor Access
+        let jsPDFConstructor;
+        if (window.jspdf && window.jspdf.jsPDF) {
+            jsPDFConstructor = window.jspdf.jsPDF;
+        } else if (window.jsPDF) {
+            jsPDFConstructor = window.jsPDF;
+        } else {
+            throw new Error("PDF Library (jsPDF) not loaded. Please refresh.");
+        }
+
+        const doc = new jsPDFConstructor();
+
+        // --- PDF Design & Branding ---
+        const primaryColor = [212, 175, 55]; // EFV Gold
+        const darkColor = [20, 20, 20];
+        const textColor = [60, 60, 60];
+
+        // Header Background
+        doc.setFillColor(...darkColor);
+        doc.rect(0, 0, 210, 45, 'F');
+
+        // Logo / Title
+        doc.setTextColor(...primaryColor);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(28);
+        doc.text("EFV™", 20, 25);
+
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "normal");
+        doc.text("OFFICIAL TAX INVOICE", 20, 35);
+
+        // Order Info Box
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(9);
+        doc.text(`Invoice No: INV-${order.orderId.split('-').pop()}`, 150, 20);
+        doc.text(`Order ID: #${order.orderId}`, 150, 27);
+        doc.text(`Date: ${new Date(order.createdAt).toLocaleDateString('en-GB')}`, 150, 34);
+
+        // Merchant Details (Left)
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.text("SOLD BY:", 20, 60);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.text("EFV™ - Educational Future Vision", 20, 67);
+        doc.text("Madhya Pradesh, India", 20, 72);
+        doc.text("GSTIN: 23EFVPA0000Z1Z1", 20, 77); // Placeholder GST
+        doc.text("Support: admin@uwo24.com", 20, 82);
+
+        // Bill To Details (Right)
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.text("BILL TO:", 120, 60);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.text(order.customer.name || 'Valued Customer', 120, 67);
+
+        // Handle address extraction safely
+        let displayAddr = 'Digital Purchase';
+        const addr = order.customer.address;
+        if (addr) {
+            if (typeof addr === 'string') displayAddr = addr;
+            else if (typeof addr === 'object') {
+                displayAddr = [addr.house, addr.area, addr.street, addr.landmark].filter(Boolean).join(', ');
+            }
+        }
+        doc.text(displayAddr, 120, 72, { maxWidth: 75 });
+        doc.text(`${order.customer.city || ''} ${order.customer.zip || ''}`, 120, 87);
+        doc.text(`Contact: ${order.customer.phone || 'N/A'}`, 120, 92);
+
+        // --- Table Section ---
+        const tableY = 105;
+        doc.setFillColor(245, 245, 245);
+        doc.rect(20, tableY, 170, 10, 'F');
+        doc.setFont("helvetica", "bold");
+        doc.text("ITEM DESCRIPTION", 25, tableY + 6.5);
+        doc.text("TYPE", 100, tableY + 6.5);
+        doc.text("QTY", 130, tableY + 6.5);
+        doc.text("PRICE", 150, tableY + 6.5);
+        doc.text("TOTAL", 175, tableY + 6.5);
+
+        // Items logic
+        doc.setFont("helvetica", "normal");
+        let currentY = tableY + 18;
+        order.items.forEach((item, index) => {
+            // Zebra striping
+            if (index % 2 === 0) {
+                doc.setFillColor(250, 250, 250);
+                doc.rect(20, currentY - 6, 170, 10, 'F');
+            }
+
+            doc.text(item.title, 25, currentY, { maxWidth: 70 });
+            doc.text(item.type, 100, currentY);
+            doc.text(item.quantity.toString(), 132, currentY);
+            doc.text(`INR ${item.price}`, 150, currentY);
+            doc.text(`INR ${item.price * item.quantity}`, 175, currentY);
+            currentY += 10;
+        });
+
+        // Totals Section
+        const totalBoxY = currentY + 10;
+        doc.setDrawColor(230, 230, 230);
+        doc.line(120, totalBoxY, 190, totalBoxY);
+
+        currentY = totalBoxY + 8;
+        doc.setFontSize(10);
+        doc.text("Subtotal:", 130, currentY);
+        doc.text(`INR ${(order.totalAmount / 1.18).toFixed(2)}`, 175, currentY);
+
+        currentY += 8;
+        doc.text("Tax (GST 18%):", 130, currentY);
+        doc.text(`INR ${(order.totalAmount - (order.totalAmount / 1.18)).toFixed(2)}`, 175, currentY);
+
+        currentY += 12;
+        doc.setFillColor(...darkColor);
+        doc.rect(125, currentY - 7, 65, 10, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.text("GRAND TOTAL:", 130, currentY);
+        doc.text(`INR ${order.totalAmount}`, 173, currentY);
+
+        // Footer & Terms
+        doc.setTextColor(150, 150, 150);
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "italic");
+        doc.text("Terms & Conditions:", 20, 260);
+        doc.text("1. This is a computer-generated invoice and requires no signature.", 20, 265);
+        doc.text("2. Digital products (E-books/Audiobooks) are non-refundable once accessed.", 20, 270);
+
+        doc.setTextColor(...primaryColor);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.text("THANK YOU FOR YOUR TRUST IN EFV™", 105, 280, { align: "center" });
+
+        doc.save(`EFV_Invoice_${order.orderId}.pdf`);
+        showToast("Invoice downloaded successfully", "success");
+    } catch (e) {
+        console.error(e);
+        showToast(e.message || "Failed to generate invoice", "error");
+    }
 };
 
 window.refreshTrackingData = async function (awb) {

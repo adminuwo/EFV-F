@@ -2050,10 +2050,18 @@ window.filterAdminOrders = function () {
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
         tr.innerHTML = `
-            <td style="padding: 12px; font-family: monospace;">#${(o.orderId || o._id.slice(-6))}</td>
+            <td style="padding: 12px; font-family: monospace;">#${(o.orderId || o._id.slice(-8))}</td>
             <td style="padding: 12px;">${date}</td>
-            <td style="padding: 12px;">${o.customer.name}<br><small style="opacity:0.6;">${o.customer.phone || 'N/A'}</small></td>
-            <td style="padding: 12px;"><div style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${items}</div></td>
+            <td style="padding: 12px;">
+                <div style="font-weight:600; color:var(--gold-text);">${o.customer.name || 'N/A'}</div>
+                <div style="font-size:0.75rem; opacity:0.7;">${o.customer.email || 'N/A'}</div>
+                <div style="font-size:0.7rem; opacity:0.5;">ID: ${o.userId || 'N/A'}</div>
+            </td>
+            <td style="padding: 12px;">
+                <div style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:0.85rem;" title="${items}">
+                    ${items}
+                </div>
+            </td>
             <td style="padding: 12px; font-weight:bold;">₹${o.totalAmount}</td>
             <td style="padding: 12px;"><span class="badge ${o.paymentStatus === 'Paid' ? 'green' : 'gold'}">${o.paymentStatus}</span></td>
             <td style="padding: 12px;">
@@ -2352,44 +2360,7 @@ window.trackNimbusShipment = async function (awb) {
     }
 };
 
-window.createNimbusShipment = async function (orderId) {
-    const btn = document.getElementById(`ship-btn-${orderId}`);
-    if (!btn) return;
-
-    if (!confirm('Initiate shipping with NimbusPost? This will create a live shipment record.')) return;
-
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
-
-    try {
-        const token = localStorage.getItem('authToken');
-        const res = await fetch(`${API_BASE}/api/shipments/create`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ orderId })
-        });
-
-        const result = await res.json();
-        if (res.ok) {
-            showToast('✅ Shipment Created Successfully!', 'success');
-            if (typeof window.loadAdminOrdersFull === 'function') window.loadAdminOrdersFull();
-            if (typeof window.loadAdminShipments === 'function') window.loadAdminShipments();
-        } else {
-            alert(result.message || 'Shipment creation failed');
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-        }
-    } catch (e) {
-        console.error(e);
-        alert('Error creating shipment: ' + e.message);
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-    }
-};
+// function removed and merged below
 
 window.loadAdminCoupons = async function () {
     const tbody = document.getElementById('admin-coupons-table-body');
@@ -2678,10 +2649,14 @@ window.viewAdminOrderDetail = async function (id) {
 window.createNimbusShipment = async function (orderId) {
     if (!confirm("Are you sure you want to create a NimbusPost shipment for this order?")) return;
 
-    const btn = document.getElementById('btn-create-shipment');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
-    btn.disabled = true;
+    // Try to find the button - can be in the table or in the modal
+    const btn = document.getElementById(`ship-btn-${orderId}`) || document.getElementById('btn-create-shipment');
+    const originalText = btn ? btn.innerHTML : 'Ship';
+
+    if (btn) {
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+        btn.disabled = true;
+    }
 
     try {
         const token = localStorage.getItem('authToken');
@@ -2696,8 +2671,10 @@ window.createNimbusShipment = async function (orderId) {
 
         const result = await res.json();
         if (res.ok) {
-            showToast("Shipment created successfully!", "success");
-            window.viewAdminOrderDetail(orderId); // Refresh details
+            showToast("✅ Shipment created successfully!", "success");
+            // Refresh details if modal is open
+            if (typeof window.viewAdminOrderDetail === 'function') window.viewAdminOrderDetail(orderId);
+            // Refresh tables
             if (document.getElementById('admin-orders').classList.contains('active')) window.loadAdminOrdersFull();
             if (document.getElementById('admin-shipments').classList.contains('active')) window.loadAdminShipments();
         } else {
@@ -2705,9 +2682,40 @@ window.createNimbusShipment = async function (orderId) {
         }
     } catch (e) {
         console.error(e);
-        alert("Error creating shipment");
+        alert("Error creating shipment: " + e.message);
     } finally {
-        btn.innerHTML = originalText;
+        if (btn) {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
+};
+
+window.syncShipment = async function (id, btnId) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i>';
+    btn.disabled = true;
+
+    try {
+        const token = localStorage.getItem('authToken');
+        const res = await fetch(`${API_BASE}/api/shipments/sync/${id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await res.json();
+        if (res.ok) {
+            showToast('✅ Status Synced!', 'success');
+            if (typeof window.loadAdminOrdersFull === 'function') window.loadAdminOrdersFull();
+            if (typeof window.loadAdminShipments === 'function') window.loadAdminShipments();
+        } else {
+            showToast(result.message || 'Sync failed', 'error');
+        }
+    } catch (e) {
+        console.error(e);
+    } finally {
+        btn.innerHTML = originalHTML;
         btn.disabled = false;
     }
 };

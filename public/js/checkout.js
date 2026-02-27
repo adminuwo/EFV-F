@@ -29,7 +29,74 @@ document.addEventListener('DOMContentLoaded', () => {
 
     renderSummary(checkoutItems);
     setupPlaceOrder(checkoutItems, user);
+    setupPincodeCheck(checkoutItems);
 });
+
+let isServiceable = true; // Default to true for now, will be updated by check
+
+function setupPincodeCheck(items) {
+    const pinInput = document.getElementById('ship-pincode');
+    const statusDiv = document.getElementById('serviceability-status');
+    const statusText = statusDiv.querySelector('.status-text');
+    const placeOrderBtn = document.getElementById('place-order-btn');
+
+    pinInput.addEventListener('input', async (e) => {
+        const pincode = e.target.value.trim();
+
+        // Only trigger check if pincode is 6 digits
+        if (pincode.length === 6 && /^\d+$/.test(pincode)) {
+            // Calculate total weight (default 0.5kg/500g if missing)
+            const totalWeight = items.reduce((sum, item) => sum + (parseFloat(item.weight) || 0.5) * item.quantity, 0);
+            const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+            statusDiv.className = 'serviceability-info checking';
+            statusText.textContent = 'Checking delivery with Nimbus...';
+            isServiceable = false;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/nimbus/check-delivery`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        pickup_pincode: "482001", // Or your warehouse pincode
+                        delivery_pincode: pincode,
+                        weight: totalWeight,
+                        order_amount: totalAmount
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.status === true) {
+                    statusDiv.className = 'serviceability-info success';
+                    statusText.textContent = 'Great! Delivery available for your area.';
+                    isServiceable = true;
+                    placeOrderBtn.disabled = false;
+                } else {
+                    statusDiv.className = 'serviceability-info error';
+                    statusText.textContent = result.message || 'Sorry, shipping not available for this pincode.';
+                    isServiceable = false;
+                    placeOrderBtn.disabled = true;
+                }
+            } catch (error) {
+                console.error('Serviceability check failed:', error);
+                statusDiv.className = 'serviceability-info success'; // Fallback to allow order if API fails
+                statusText.textContent = 'Network error. We will verify delivery manually.';
+                isServiceable = true;
+                placeOrderBtn.disabled = false;
+            }
+        } else {
+            statusDiv.style.display = 'none';
+        }
+    });
+
+    // Also check if pre-filled pincode (e.g. from saved address) exists
+    if (pinInput.value.length === 6) {
+        pinInput.dispatchEvent(new Event('input'));
+    }
+}
 
 function renderSummary(items) {
     const list = document.getElementById('checkout-items-list');
@@ -86,6 +153,11 @@ function setupPlaceOrder(items, user) {
 
         if (pincode.length !== 6 || !/^\d+$/.test(pincode)) {
             alert('Please enter a valid 6-digit pincode.');
+            return;
+        }
+
+        if (!isServiceable) {
+            alert('Your location is currently not serviceable. Please choose another address.');
             return;
         }
 

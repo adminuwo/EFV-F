@@ -199,14 +199,30 @@
 
             <!-- MY ORDERS TAB -->
             <section id="orders" class="content-section">
-                <header class="content-header">
-                    <h1>My <span class="gold-text">Orders</span></h1>
-                    <p>Track your orders and download invoices</p>
+                <header class="content-header"
+                    style="justify-content: space-between; align-items: center; display: flex;">
+                    <div>
+                        <h1>My <span class="gold-text">Orders</span></h1>
+                        <p>Track your orders and download invoices</p>
+                    </div>
+                    <button class="btn btn-outline small" onclick="renderOrdersTab()"><i class="fas fa-sync-alt"></i>
+                        Sync</button>
                 </header>
                 <div id="dashboard-orders-list" class="orders-list"></div>
                 <div id="orders-empty-state" class="empty-state hidden">
-                    <i class="fas fa-box-open"></i>
-                    <h3>No orders found</h3>
+                    <div style="text-align: center; padding: 60px 20px; opacity: 0.5;">
+                        <div
+                            style="width: 80px; height: 80px; background: rgba(255,211,105,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; border: 1px solid rgba(255,211,105,0.1);">
+                            <i class="fas fa-box-open gold-text" style="font-size: 2rem;"></i>
+                        </div>
+                        <h3 style="font-family: 'Cinzel', serif; letter-spacing: 2px;">No orders found</h3>
+                        <p style="font-size: 0.85rem; max-width: 300px; margin: 10px auto;">Your journey awaits.
+                            Discover our collection in the marketplace.</p>
+                        <a href="marketplace.html" class="btn btn-gold small"
+                            style="margin-top: 20px; display: inline-flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-shopping-bag"></i> Browse Store
+                        </a>
+                    </div>
                 </div>
             </section>
 
@@ -358,82 +374,119 @@
         </main>
     </div>
 
-    <!-- Modals -->
-    <!-- Order Detail Modal (Upgraded) -->
+    <!-- Order Detail Modal (Premium Redesign) -->
     <div id="order-detail-modal" class="reader-overlay" style="display: none; z-index: 10000;">
-        <div class="reader-toolbar glass-panel">
-            <div class="reader-title"><i class="fas fa-box-open gold-text"></i> ORDER DETAILS <span id="modal-order-id"
-                    style="color: white; margin-left: 10px;">#ORD-000</span></div>
-            <button class="btn-icon" onclick="closeOrderDetailModal()"><i class="fas fa-times"></i></button>
+
+        <!-- Top Bar -->
+        <div
+            style="position: fixed; top: 0; left: 0; right: 0; z-index: 10001; background: rgba(8,10,16,0.97); border-bottom: 1px solid rgba(255,211,105,0.15); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; backdrop-filter: blur(20px);">
+            <div class="reader-title" style="font-size: 0.85rem; letter-spacing: 2px;">
+                <i class="fas fa-box-open gold-text"></i>
+                ORDER DETAILS
+                <span id="modal-order-id"
+                    style="color: rgba(255,211,105,0.8); margin-left: 10px; font-size: 0.75rem;"></span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span id="modal-order-date" style="font-size: 0.72rem; opacity: 0.4;"></span>
+                <button class="btn-icon" onclick="closeOrderDetailModal()"
+                    style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center;">
+                    <i class="fas fa-times" style="font-size:0.8rem;"></i>
+                </button>
+            </div>
         </div>
 
+        <!-- Scrollable Body -->
         <div class="reader-canvas-container"
-            style="justify-content: center; align-items: flex-start; padding: 40px 20px; overflow-y: auto;">
-            <div style="width: 95%; max-width: 900px; display: grid; grid-template-columns: 1fr 320px; gap: 30px;">
+            style="padding: 80px 20px 30px; overflow-y: auto; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh;">
+            <div
+                style="width: 100%; max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px;">
 
-                <!-- Left: Items & Tracking -->
-                <div>
-                    <!-- Timeline Section -->
-                    <div class="glass-panel" style="padding: 30px; margin-bottom: 25px; border-radius: 20px;">
-                        <h3 style="margin-bottom: 30px; display: flex; align-items: center; gap: 10px;">
-                            <i class="fas fa-truck-loading gold-text"></i> Tracking Status
-                        </h3>
-                        <div id="modal-order-timeline" class="tracking-timeline-v2">
-                            <!-- Timeline Steps Injected Here -->
-                        </div>
-                    </div>
-
-                    <!-- Items Section -->
-                    <div class="glass-panel" style="padding: 30px; border-radius: 20px;">
-                        <h3 style="margin-bottom: 25px;">Order Items</h3>
-                        <div id="modal-order-items" style="display: flex; flex-direction: column; gap: 15px;">
-                            <!-- Items Injected Here -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right: Summary & Address -->
-                <div style="display: flex; flex-direction: column; gap: 25px;">
-                    <!-- Price Summary -->
-                    <div class="glass-panel" style="padding: 25px; border-radius: 20px;">
-                        <h4
-                            style="margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
-                            Payment Summary</h4>
-                        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.95rem;">
-                            <div style="display: flex; justify-content: space-between; opacity: 0.7;">
-                                <span>Subtotal</span>
-                                <span id="modal-subtotal">₹0.00</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; opacity: 0.7;">
-                                <span>Shipping</span>
-                                <span style="color: #4CAF50;">FREE</span>
-                            </div>
-                            <div
-                                style="display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); font-weight: 800; font-size: 1.1rem; color: var(--gold-text);">
-                                <span>Total Paid</span>
-                                <span id="modal-total">₹0.00</span>
-                            </div>
-                        </div>
+                <!-- Tracking Timeline Section (hidden in details mode) -->
+                <div class="glass-panel" id="modal-tracking-panel"
+                    style="padding: 20px; border-radius: 16px; border-color: rgba(255,211,105,0.12);">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
                         <div
-                            style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem; opacity: 0.6;">
-                            <p style="margin: 0;">Method: <span id="modal-payment-method"
-                                    style="color: white; font-weight: 600;">Razorpay</span></p>
-                            <p style="margin: 5px 0 0;">Status: <span id="modal-payment-status"
-                                    style="color: #4CAF50; font-weight: 600;">Paid</span></p>
+                            style="width:30px; height:30px; background:rgba(255,211,105,0.1); border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <i class="fas fa-route gold-text" style="font-size:0.8rem;"></i>
+                        </div>
+                        <span
+                            style="font-size:0.72rem; font-weight:700; letter-spacing:2px; opacity:0.6; text-transform:uppercase;">Tracking
+                            Status</span>
+                    </div>
+                    <div id="modal-order-timeline" class="tracking-timeline-v2"></div>
+                </div>
+
+                <!-- Order Items -->
+                <div class="glass-panel"
+                    style="padding: 20px; border-radius: 16px; border-color: rgba(255,211,105,0.12);">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+                        <div
+                            style="width:30px; height:30px; background:rgba(255,211,105,0.1); border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <i class="fas fa-shopping-bag gold-text" style="font-size:0.8rem;"></i>
+                        </div>
+                        <span
+                            style="font-size:0.72rem; font-weight:700; letter-spacing:2px; opacity:0.6; text-transform:uppercase;">Order
+                            Items</span>
+                    </div>
+                    <div id="modal-order-items" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                </div>
+
+                <!-- Payment + Address Row -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+
+                    <!-- Payment Summary -->
+                    <div class="glass-panel"
+                        style="padding: 18px; border-radius: 16px; border-color: rgba(255,211,105,0.12);">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
+                            <div
+                                style="width:28px; height:28px; background:rgba(255,211,105,0.1); border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                <i class="fas fa-receipt gold-text" style="font-size:0.75rem;"></i>
+                            </div>
+                            <span
+                                style="font-size:0.65rem; font-weight:700; letter-spacing:1.5px; opacity:0.5; text-transform:uppercase;">Payment</span>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:8px; font-size:0.8rem;">
+                            <div style="display:flex; justify-content:space-between; opacity:0.6;">
+                                <span>Subtotal</span>
+                                <span id="modal-subtotal">₹0</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; opacity:0.6;">
+                                <span>Shipping</span>
+                                <span style="color:#4CAF50; font-weight:600;">FREE</span>
+                            </div>
+                            <div style="height:1px; background:rgba(255,255,255,0.07); margin:4px 0;"></div>
+                            <div
+                                style="display:flex; justify-content:space-between; font-weight:800; color:var(--gold-text);">
+                                <span>Total</span>
+                                <span id="modal-total">₹0</span>
+                            </div>
+                            <div style="height:1px; background:rgba(255,255,255,0.05); margin:4px 0;"></div>
+                            <div style="font-size:0.72rem; opacity:0.5;">
+                                <div>Via: <span id="modal-payment-method" style="color:white; font-weight:600;"></span>
+                                </div>
+                                <div style="margin-top:3px;">Status: <span id="modal-payment-status"
+                                        style="font-weight:600;"></span></div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Delivery Address -->
-                    <div class="glass-panel" style="padding: 25px; border-radius: 20px;">
-                        <h4 style="margin-bottom: 15px;">Shipping Address</h4>
-                        <p id="modal-shipping-address"
-                            style="font-size: 0.9rem; opacity: 0.8; line-height: 1.6; margin: 0;"></p>
+                    <!-- Shipping Address -->
+                    <div class="glass-panel"
+                        style="padding: 18px; border-radius: 16px; border-color: rgba(255,211,105,0.12);">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
+                            <div
+                                style="width:28px; height:28px; background:rgba(255,211,105,0.1); border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                <i class="fas fa-map-marker-alt gold-text" style="font-size:0.75rem;"></i>
+                            </div>
+                            <span
+                                style="font-size:0.65rem; font-weight:700; letter-spacing:1.5px; opacity:0.5; text-transform:uppercase;">Ship
+                                To</span>
+                        </div>
+                        <div id="modal-shipping-address" style="font-size:0.78rem; line-height:1.7; opacity:0.8;"></div>
                     </div>
 
-                    <div id="modal-order-date" style="text-align: center; font-size: 0.8rem; opacity: 0.4;">
-                        Placed on: Feb 25, 2026
-                    </div>
                 </div>
+
             </div>
         </div>
     </div>
@@ -569,6 +622,7 @@
     </div>
 
     <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script src="js/api-config.js"></script>
     <script src="js/profile.js"></script>

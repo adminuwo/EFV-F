@@ -329,7 +329,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const isDigital = rawType === 'audiobook' || rawType === 'ebook';
         const isVol2 = product.volume === '2' || (product._id || product.id || '').toLowerCase().includes('v2');
-        const isComingSoon = isDigital || isVol2;
+        // Only audiobooks and Vol 2 are "Coming Soon". E-Books are now available.
+        const isComingSoon = rawType === 'audiobook' || isVol2;
         const buttonText = isComingSoon ? 'Coming Soon' : 'Add to Cart';
 
         const langBadge = product.language

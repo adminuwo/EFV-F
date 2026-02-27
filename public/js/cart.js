@@ -415,7 +415,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const id = (card.getAttribute('data-id') || '').toLowerCase();
             const btn = card.querySelector('.add-to-cart');
 
-            if (btn && (id.includes('audio') || id.includes('ebook') || id.includes('v2'))) {
+            // Only audiobooks and Vol 2 are "Coming Soon". E-Books are available.
+            if (btn && (id.includes('audio') || id.includes('v2'))) {
                 btn.textContent = 'Coming Soon';
                 btn.style.background = 'rgba(255, 211, 105, 0.1)';
                 btn.style.color = 'rgba(255, 211, 105, 0.5)';
@@ -558,7 +559,8 @@ document.addEventListener('DOMContentLoaded', () => {
             buyBtn.setAttribute('data-target-id', productId);
 
             const targetId = (productId || '').toLowerCase();
-            if (targetId.includes('audio') || targetId.includes('ebook') || targetId.includes('v2')) {
+            // Only audiobooks and Vol 2 are "Coming Soon". E-Books are now available.
+            if (targetId.includes('audio') || targetId.includes('v2')) {
                 addBtn.innerHTML = '<i class="fas fa-clock"></i> COMING SOON';
                 addBtn.disabled = true;
                 addBtn.style.opacity = '0.5';

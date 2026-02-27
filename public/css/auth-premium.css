@@ -125,11 +125,13 @@ input:-webkit-autofill:active {
 /* ---------- Card ---------- */
 .auth-premium-card {
     width: 100%;
-    max-width: 460px;
+    max-width: 420px;
+    max-height: 90vh;
+    overflow-y: auto;
+    overflow-x: hidden;
     position: relative;
     border-radius: 28px;
-    padding: 52px 44px 44px;
-    overflow: hidden;
+    padding: 40px 36px 36px;
 
     /* Deep dark glass */
     background: linear-gradient(160deg,
@@ -142,6 +144,23 @@ input:-webkit-autofill:active {
         0 1px 0 rgba(255, 211, 105, 0.15) inset;
 
     animation: authFadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+
+    /* Scrollbar styling */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 211, 105, 0.2) transparent;
+}
+
+.auth-premium-card::-webkit-scrollbar {
+    width: 4px;
+}
+
+.auth-premium-card::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.auth-premium-card::-webkit-scrollbar-thumb {
+    background: rgba(255, 211, 105, 0.2);
+    border-radius: 4px;
 }
 
 /* Top edge gold shine */
@@ -201,11 +220,11 @@ input:-webkit-autofill:active {
 .auth-premium-title {
     text-align: center;
     font-family: 'Cinzel', serif;
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
     letter-spacing: 3px;
     text-transform: uppercase;
-    margin-bottom: 32px;
+    margin-bottom: 20px;
     background: linear-gradient(180deg, #ffffff 0%, #FFD369 100%);
     -webkit-background-clip: text;
     background-clip: text;
@@ -217,7 +236,7 @@ input:-webkit-autofill:active {
 .auth-premium-tabs {
     display: flex;
     gap: 0;
-    margin-bottom: 32px;
+    margin-bottom: 20px;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.07);
     border-radius: 14px;
@@ -260,8 +279,8 @@ input:-webkit-autofill:active {
 .input-group {
     display: flex;
     flex-direction: column;
-    gap: 7px;
-    margin-bottom: 18px;
+    gap: 4px;
+    margin-bottom: 8px;
 }
 
 .auth-label {
@@ -279,13 +298,13 @@ input:-webkit-autofill:active {
 
 .auth-input {
     width: 100%;
-    height: 52px;
+    height: 38px;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.09);
-    border-radius: 14px;
-    padding: 0 46px;
+    border-radius: 10px;
+    padding: 0 40px;
     color: #fff;
-    font-size: 15px;
+    font-size: 13px;
     transition: all 0.3s ease;
     outline: none;
 }
@@ -426,12 +445,12 @@ input:-webkit-autofill:active {
 /* ---------- Auth Button ---------- */
 .auth-btn {
     width: 100%;
-    height: 52px;
+    height: 42px;
     border: none;
-    border-radius: 16px;
+    border-radius: 12px;
     cursor: pointer;
     font-weight: 700;
-    font-size: 13px;
+    font-size: 12px;
     letter-spacing: 2px;
     text-transform: uppercase;
     color: #0a0d14;
