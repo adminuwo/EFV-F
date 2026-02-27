@@ -12,14 +12,12 @@ const LibraryDashboard = nextDynamic(() => import('@/components/Library/LibraryD
 
 function AppContent() {
   useSecurity(); // Activate global security blockers
-  const [activeTab, setActiveTab] = useState<'marketplace' | 'library'>('library');
 
   return (
     <main className="min-h-screen bg-black text-white selection:bg-gold-energy/30">
       <div className="container mx-auto px-4 py-8">
         {/* Navigation Tabs */}
         <div className="flex gap-4 mb-8 border-b border-white/10">
-          {/* Marketplace Link - Redirects to static HTML */}
           <a
             href="/marketplace.html"
             className="flex items-center gap-2 px-6 py-3 font-bold transition-all text-white/50 hover:text-white/80"
@@ -27,20 +25,16 @@ function AppContent() {
             <ShoppingBag className="w-5 h-5" />
             Marketplace
           </a>
-          <button
-            onClick={() => setActiveTab('library')}
-            className={`flex items-center gap-2 px-6 py-3 font-bold transition-all ${activeTab === 'library'
-              ? 'text-gold-energy border-b-2 border-gold-energy'
-              : 'text-white/50 hover:text-white/80'
-              }`}
+          <div
+            className="flex items-center gap-2 px-6 py-3 font-bold transition-all text-gold-energy border-b-2 border-gold-energy"
           >
             <Library className="w-5 h-5" />
             My Library
-          </button>
+          </div>
         </div>
 
-        {/* Content */}
-        {activeTab === 'marketplace' ? <Marketplace /> : <LibraryDashboard />}
+        {/* Content - Just the Library Dashboard */}
+        <LibraryDashboard />
       </div>
     </main>
   );

@@ -88,7 +88,7 @@ function setupPincodeCheck(items) {
                 placeOrderBtn.disabled = false;
             }
         } else {
-            statusDiv.style.display = 'none';
+            statusDiv.className = 'serviceability-info'; // Reverts to display:none via CSS
         }
     });
 
