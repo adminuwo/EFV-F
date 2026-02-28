@@ -2,7 +2,7 @@
 
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://efv-b.onrender.com';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://efvbackend-743928421487.asia-south1.run.app';
 
 // Get auth token from localStorage
 const getAuthHeader = () => {

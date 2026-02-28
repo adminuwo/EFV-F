@@ -38,7 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const login = async (email: string, password: string) => {
         try {
-            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://efv-b.onrender.com';
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://efvbackend-743928421487.asia-south1.run.app';
             const { data } = await axios.post(`${API_URL}/api/auth/login`, { email, password });
             setUser(data);
             localStorage.setItem('efv_auth_user', JSON.stringify(data));
