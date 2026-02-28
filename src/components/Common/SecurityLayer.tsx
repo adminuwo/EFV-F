@@ -11,8 +11,11 @@ const SecurityLayer: React.FC = () => {
 
     // Set initial time on mount to avoid hydration mismatch and lint errors
     useEffect(() => {
-        setWatermarkTime(new Date().toLocaleTimeString());
-        setLastFocusTime(Date.now());
+        const timer = setTimeout(() => {
+            setWatermarkTime(new Date().toLocaleTimeString());
+            setLastFocusTime(Date.now());
+        }, 0);
+        return () => clearTimeout(timer);
     }, []);
 
     const triggerViolation = useCallback((reason: string) => {
@@ -37,14 +40,24 @@ const SecurityLayer: React.FC = () => {
 
     useEffect(() => {
         // Init User Data
-        const user = JSON.parse(localStorage.getItem('efv_user') || '{}');
-        setUserData(prev => ({
-            ...prev,
-            name: user.name || 'Anonymous',
-            email: user.email || 'N/A',
-            id: user._id || user.id || 'N/A'
-        }));
-        fetchIP();
+        const timer = setTimeout(() => {
+            const userStr = localStorage.getItem('efv_user');
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    setUserData(prev => ({
+                        ...prev,
+                        name: user.name || 'Anonymous',
+                        email: user.email || 'N/A',
+                        id: user._id || user.id || 'N/A'
+                    }));
+                } catch (e) {
+                    console.error("Error parsing user data", e);
+                }
+            }
+            fetchIP();
+        }, 0);
+        return () => clearTimeout(timer);
 
         // Listen for activation events
         const handleEnable = () => {

@@ -7,7 +7,6 @@ import { useSecurity } from '@/hooks/useSecurity';
 import { Library, ShoppingBag } from 'lucide-react';
 
 // Dynamically import client components with SSR disabled to prevent 'DOMMatrix is not defined' errors
-const Marketplace = nextDynamic(() => import('@/components/Marketplace/Marketplace'), { ssr: false });
 const LibraryDashboard = nextDynamic(() => import('@/components/Library/LibraryDashboard'), { ssr: false });
 
 function AppContent() {
@@ -46,7 +45,10 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    const timer = setTimeout(() => {
+      setMounted(true);
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   if (!mounted) {

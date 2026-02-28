@@ -53,8 +53,11 @@ const LibraryDashboard = () => {
             }
         };
 
-        fetchLibraryData();
-    }, [user?.token, user?.email]);
+        const timer = setTimeout(() => {
+            fetchLibraryData();
+        }, 0);
+        return () => clearTimeout(timer);
+    }, [user, user?.token, user?.email]);
 
     if (!user) return (
         <div className="flex flex-col items-center justify-center p-20 text-center">
