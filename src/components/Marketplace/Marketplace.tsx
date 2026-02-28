@@ -64,8 +64,9 @@ const Marketplace = () => {
             // Update library items
             setLibraryItems(prev => new Set([...prev, productId]));
 
-        } catch (error: any) {
-            const message = error.response?.data?.message || 'Error adding to library';
+        } catch (error: unknown) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const message = (error as any).response?.data?.message || 'Error adding to library';
             alert(message);
         } finally {
             setAddingToLibrary(null);

@@ -2,65 +2,71 @@
 
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://efv-b.onrender.com/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://efv-b.onrender.com';
 
 // Get auth token from localStorage
 const getAuthHeader = () => {
+    if (typeof window === 'undefined') return {};
     const user = localStorage.getItem('efv_auth_user');
     if (user) {
-        const { token } = JSON.parse(user);
-        return { Authorization: `Bearer ${token}` };
+        try {
+            const { token } = JSON.parse(user);
+            return { Authorization: `Bearer ${token}` };
+        } catch (e) {
+            console.error("Error parsing user token", e);
+        }
     }
     return {};
 };
 
+// Update routes to include /api prefix to match consistency
 export const api = {
     // Auth
     login: (email: string, password: string) =>
-        axios.post(`${API_URL}/auth/login`, { email, password }),
+        axios.post(`${API_URL}/api/auth/login`, { email, password }),
 
     signup: (name: string, email: string, password: string) =>
-        axios.post(`${API_URL}/auth/signup`, { name, email, password }),
+        axios.post(`${API_URL}/api/auth/signup`, { name, email, password }),
 
     // Products
     getProducts: () =>
-        axios.get(`${API_URL}/products`),
+        axios.get(`${API_URL}/api/products`),
 
     getProduct: (id: string) =>
-        axios.get(`${API_URL}/products/${id}`),
+        axios.get(`${API_URL}/api/products/${id}`),
 
     // Demo Mode
     addToLibrary: (productId: string) =>
-        axios.post(`${API_URL}/demo/add-to-library`, { productId }, {
+        axios.post(`${API_URL}/api/demo/add-to-library`, { productId }, {
             headers: getAuthHeader()
         }),
 
     // Library
     getMyLibrary: () =>
-        axios.get(`${API_URL}/library/my-library`, {
+        axios.get(`${API_URL}/api/library/my-library`, {
             headers: getAuthHeader()
         }),
 
     getLibraryCount: () =>
-        axios.get(`${API_URL}/demo/library-count`, {
+        axios.get(`${API_URL}/api/demo/library-count`, {
             headers: getAuthHeader()
         }),
 
     // Progress
     getProgress: (productId: string) =>
-        axios.get(`${API_URL}/library/progress/${productId}`, {
+        axios.get(`${API_URL}/api/library/progress/${productId}`, {
             headers: getAuthHeader()
         }),
 
     saveProgress: (productId: string, progress: number, total: number) =>
-        axios.post(`${API_URL}/library/progress`, { productId, progress, total }, {
+        axios.post(`${API_URL}/api/library/progress`, { productId, progress, total }, {
             headers: getAuthHeader()
         }),
 
     // Content Streaming
     getEbookUrl: (productId: string) =>
-        `${API_URL}/content/ebook/${productId}`,
+        `${API_URL}/api/content/ebook/${productId}`,
 
     getAudioUrl: (productId: string) =>
-        `${API_URL}/content/audio/${productId}`,
+        `${API_URL}/api/content/audio/${productId}`,
 };

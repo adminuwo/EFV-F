@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import axios from 'axios';
 import ResumeModal from '../Common/ResumeModal';
 import { Play, Pause, Volume2, SkipBack, SkipForward, Headphones, Repeat, Shuffle } from 'lucide-react';
@@ -62,7 +62,7 @@ const SecureAudioPlayer: React.FC<SecureAudioPlayerProps> = ({ streamUrl, title,
         fetchProgress();
     }, [productId]);
 
-    const saveAudioProgress = async (pos: number) => {
+    const saveAudioProgress = useCallback(async (pos: number) => {
         if (pos <= 5) return;
         try {
             const authStr = localStorage.getItem('efv_auth_user');
@@ -81,25 +81,27 @@ const SecureAudioPlayer: React.FC<SecureAudioPlayerProps> = ({ streamUrl, title,
         } catch (err) {
             console.error('Error saving audio progress', err);
         }
-    };
+    }, [productId]);
 
     // Save progress periodically (throttled)
     useEffect(() => {
         if (!isReady || showResumeModal) return;
 
+        const currentAudio = audioRef.current;
+
         const saveInterval = setInterval(() => {
-            if (isPlaying && audioRef.current) {
-                saveAudioProgress(audioRef.current.currentTime);
+            if (isPlaying && currentAudio) {
+                saveAudioProgress(currentAudio.currentTime);
             }
         }, 10000);
 
         return () => {
             clearInterval(saveInterval);
-            if (isReady && audioRef.current && audioRef.current.currentTime > 5 && !showResumeModal) {
-                saveAudioProgress(audioRef.current.currentTime);
+            if (isReady && currentAudio && currentAudio.currentTime > 5 && !showResumeModal) {
+                saveAudioProgress(currentAudio.currentTime);
             }
         };
-    }, [isPlaying, productId, showResumeModal, isReady]);
+    }, [isPlaying, productId, showResumeModal, isReady, saveAudioProgress]);
 
     useEffect(() => {
         // Obfuscate the stream URL using a local Blob URL
@@ -119,7 +121,7 @@ const SecureAudioPlayer: React.FC<SecureAudioPlayerProps> = ({ streamUrl, title,
         return () => {
             if (obfuscatedUrl) URL.revokeObjectURL(obfuscatedUrl);
         };
-    }, [streamUrl]);
+    }, [streamUrl, obfuscatedUrl]);
 
     const togglePlay = () => {
         if (!audioRef.current) return;

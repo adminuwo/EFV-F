@@ -26,9 +26,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         const storedUser = localStorage.getItem('efv_auth_user');
         if (storedUser) {
-            setUser(JSON.parse(storedUser));
+            try {
+                const parsed = JSON.parse(storedUser);
+                setTimeout(() => setUser(parsed), 0);
+            } catch (err) {
+                console.error('Error parsing stored user', err);
+            }
         }
-        setLoading(false);
+        setTimeout(() => setLoading(false), 0);
     }, []);
 
     const login = async (email: string, password: string) => {

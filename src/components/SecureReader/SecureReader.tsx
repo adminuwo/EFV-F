@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as pdfjs from 'pdfjs-dist';
 import axios from 'axios';
 
@@ -89,7 +89,7 @@ const SecureReader: React.FC<SecureReaderProps> = ({ fileUrl, userEmail, product
     }, [productId, userEmail]);
 
     // Helper to save progress
-    const saveProgress = async (page: number) => {
+    const saveProgress = useCallback(async (page: number) => {
         if (page <= 1 || numPages <= 0) return;
 
         try {
@@ -110,7 +110,7 @@ const SecureReader: React.FC<SecureReaderProps> = ({ fileUrl, userEmail, product
         } catch (err) {
             console.error('[SECURE READER] Error saving progress:', err);
         }
-    };
+    }, [productId, numPages]);
 
     // Save progress when page changes (Debounced)
     useEffect(() => {
@@ -128,7 +128,7 @@ const SecureReader: React.FC<SecureReaderProps> = ({ fileUrl, userEmail, product
                 saveProgress(currentPage);
             }
         };
-    }, [currentPage, productId, numPages, showResumeModal, isReady]);
+    }, [currentPage, productId, numPages, showResumeModal, isReady, saveProgress]);
 
     useEffect(() => {
         const loadPage = async () => {
@@ -154,6 +154,7 @@ const SecureReader: React.FC<SecureReaderProps> = ({ fileUrl, userEmail, product
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
 
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const renderContext: any = {
                     canvasContext: context,
                     viewport: viewport,

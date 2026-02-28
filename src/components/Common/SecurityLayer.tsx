@@ -6,9 +6,14 @@ const SecurityLayer: React.FC = () => {
     const [isTampered, setIsTampered] = useState(false);
     const [isActive, setIsActive] = useState(false); // Default OFF
     const [userData, setUserData] = useState({ name: 'User', email: 'N/A', id: 'N/A', ip: '0.0.0.0' });
-    const [watermarkTime, setWatermarkTime] = useState(new Date().toLocaleTimeString());
+    const [watermarkTime, setWatermarkTime] = useState('');
+    const [lastFocusTime, setLastFocusTime] = useState(0);
 
-    const [lastFocusTime, setLastFocusTime] = useState(Date.now());
+    // Set initial time on mount to avoid hydration mismatch and lint errors
+    useEffect(() => {
+        setWatermarkTime(new Date().toLocaleTimeString());
+        setLastFocusTime(Date.now());
+    }, []);
 
     const triggerViolation = useCallback((reason: string) => {
         if (!isActive) return; // Ignore if not active
@@ -18,7 +23,7 @@ const SecurityLayer: React.FC = () => {
 
         // Pause all media
         document.querySelectorAll('video, audio').forEach(m => {
-            try { (m as any).pause(); } catch (e) { }
+            try { (m as HTMLMediaElement).pause(); } catch (e) { }
         });
     }, [isActive]);
 
@@ -192,7 +197,7 @@ const SecurityLayer: React.FC = () => {
             document.removeEventListener('copy', handleCopy);
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, [isTampered, triggerViolation, isActive, lastFocusTime]);
+    }, [isTampered, triggerViolation, isActive, lastFocusTime, userData.email, userData.id, watermarkTime]);
 
     // Watermark grid
     const renderWatermarks = () => {

@@ -18,7 +18,7 @@ interface Product {
 const LibraryDashboard = () => {
     const { user } = useAuth();
     const [items, setItems] = useState<Product[]>([]);
-    const [progressData, setProgressData] = useState<Record<string, any>>({});
+    const [progressData, setProgressData] = useState<Record<string, { progress: number, total: number }>>({});
     const [activeItem, setActiveItem] = useState<Product | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -34,11 +34,11 @@ const LibraryDashboard = () => {
                 setItems(libraryItems);
 
                 // Fetch progress for each item
-                const progressMap: Record<string, any> = {};
+                const progressMap: Record<string, { progress: number, total: number }> = {};
                 await Promise.all(libraryItems.map(async (item: Product) => {
                     try {
                         const { data } = await axios.get(`${API_URL}/api/library/progress/${item._id}`, {
-                            headers: { Authorization: `Bearer ${user.token}` }
+                            headers: { Authorization: `Bearer ${user?.token}` }
                         });
                         if (data && data.progress > 0) {
                             progressMap[item._id] = data;
@@ -54,7 +54,7 @@ const LibraryDashboard = () => {
         };
 
         fetchLibraryData();
-    }, [user]);
+    }, [user?.token, user?.email]);
 
     if (!user) return (
         <div className="flex flex-col items-center justify-center p-20 text-center">
