@@ -26,7 +26,7 @@ const SecurityLayer: React.FC = () => {
 
         // Pause all media
         document.querySelectorAll('video, audio').forEach(m => {
-            try { (m as HTMLMediaElement).pause(); } catch (e) { }
+            try { (m as HTMLMediaElement).pause(); } catch { }
         });
     }, [isActive]);
 
@@ -35,7 +35,7 @@ const SecurityLayer: React.FC = () => {
             const res = await fetch('https://api.ipify.org?format=json');
             const data = await res.json();
             setUserData(prev => ({ ...prev, ip: data.ip }));
-        } catch (e) { }
+        } catch { }
     };
 
     useEffect(() => {

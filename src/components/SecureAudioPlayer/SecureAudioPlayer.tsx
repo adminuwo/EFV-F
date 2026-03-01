@@ -3,8 +3,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import axios from 'axios';
 import ResumeModal from '../Common/ResumeModal';
-import { Play, Pause, Volume2, SkipBack, SkipForward, Headphones, List, FastForward, Rewind, ChevronRight, Clock, CheckCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Play, Pause, SkipBack, SkipForward, Headphones, List, FastForward, Rewind, ChevronRight, Clock, CheckCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface Chapter {
     chapterNumber: number;
@@ -21,7 +21,7 @@ interface SecureAudioPlayerProps {
     initialTime?: number;
 }
 
-const SecureAudioPlayer: React.FC<SecureAudioPlayerProps> = ({ productId, title, chapters, initialChapterIndex = 0, initialTime = 0 }) => {
+const SecureAudioPlayer: React.FC<SecureAudioPlayerProps> = ({ productId, title, chapters, initialChapterIndex = 0 }) => {
     const audioRef = useRef<HTMLAudioElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);

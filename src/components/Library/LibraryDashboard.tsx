@@ -15,12 +15,23 @@ interface Product {
     thumbnail?: string;
 }
 
+interface Chapter {
+    chapterNumber: number;
+    title: string;
+    filePath: string;
+    duration?: number;
+}
+
+interface FullProduct extends Product {
+    chapters?: Chapter[];
+}
+
 const LibraryDashboard = () => {
     const { user } = useAuth();
     const [items, setItems] = useState<Product[]>([]);
     const [progressData, setProgressData] = useState<Record<string, { progress: number, total: number }>>({});
     const [activeItem, setActiveItem] = useState<Product | null>(null);
-    const [fullProduct, setFullProduct] = useState<any>(null);
+    const [fullProduct, setFullProduct] = useState<FullProduct | null>(null);
     const [fetchingFull, setFetchingFull] = useState(false);
     const [loading, setLoading] = useState(true);
 
@@ -61,7 +72,7 @@ const LibraryDashboard = () => {
                         if (data && data.progress > 0) {
                             progressMap[item._id] = data;
                         }
-                    } catch (e) { /* ignore */ }
+                    } catch { /* ignore */ }
                 }));
                 setProgressData(progressMap);
             } catch (err) {
