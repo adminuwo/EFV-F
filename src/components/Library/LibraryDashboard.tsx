@@ -20,14 +20,32 @@ const LibraryDashboard = () => {
     const [items, setItems] = useState<Product[]>([]);
     const [progressData, setProgressData] = useState<Record<string, { progress: number, total: number }>>({});
     const [activeItem, setActiveItem] = useState<Product | null>(null);
+    const [fullProduct, setFullProduct] = useState<any>(null);
+    const [fetchingFull, setFetchingFull] = useState(false);
     const [loading, setLoading] = useState(true);
+
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://efvbackend-743928421487.asia-south1.run.app';
+
+    const openContent = async (product: Product) => {
+        setActiveItem(product);
+        if (product.type === 'AUDIOBOOK') {
+            setFetchingFull(true);
+            try {
+                const { data } = await axios.get(`${API_URL}/api/products/${product._id}`);
+                setFullProduct(data);
+            } catch (err) {
+                console.error("Error fetching chapters", err);
+            } finally {
+                setFetchingFull(false);
+            }
+        }
+    };
 
     useEffect(() => {
         if (!user) return;
 
         const fetchLibraryData = async () => {
             try {
-                const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://efvbackend-743928421487.asia-south1.run.app';
                 const { data: libraryItems } = await axios.get(`${API_URL}/api/library/my-library`, {
                     headers: { Authorization: `Bearer ${user.token}` }
                 });
@@ -57,7 +75,7 @@ const LibraryDashboard = () => {
             fetchLibraryData();
         }, 0);
         return () => clearTimeout(timer);
-    }, [user, user?.token, user?.email]);
+    }, [user, user?.token, user?.email, API_URL]);
 
     if (!user) return (
         <div className="flex flex-col items-center justify-center p-20 text-center">
@@ -81,9 +99,9 @@ const LibraryDashboard = () => {
             </div>
 
             {activeItem ? (
-                <div className="max-w-5xl mx-auto">
+                <div className="max-w-6xl mx-auto">
                     <button
-                        onClick={() => setActiveItem(null)}
+                        onClick={() => { setActiveItem(null); setFullProduct(null); }}
                         className="group mb-8 text-gray-500 hover:text-white flex items-center gap-3 transition-colors font-black text-xs tracking-widest uppercase"
                     >
                         <motion.span animate={{ x: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 1.5 }}>←</motion.span>
@@ -92,21 +110,29 @@ const LibraryDashboard = () => {
                     <motion.div
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-black rounded-[3rem] overflow-hidden border border-white/5 shadow-[0_0_100px_rgba(0,0,0,0.5)]"
                     >
                         {activeItem.type === 'EBOOK' ? (
-                            <SecureReader
-                                fileUrl={`${process.env.NEXT_PUBLIC_API_URL || 'https://efvbackend-743928421487.asia-south1.run.app'}/api/content/ebook/${activeItem._id}`}
-                                userEmail={user.email}
-                                productId={activeItem._id}
-                            />
-                        ) : (
-                            <div className="flex justify-center p-12">
-                                <SecureAudioPlayer
-                                    streamUrl={`${process.env.NEXT_PUBLIC_API_URL || 'https://efvbackend-743928421487.asia-south1.run.app'}/api/content/audio/${activeItem._id}`}
-                                    title={activeItem.title}
+                            <div className="bg-black rounded-[3rem] overflow-hidden border border-white/5 shadow-[0_0_100px_rgba(0,0,0,0.5)]">
+                                <SecureReader
+                                    fileUrl={`${API_URL}/api/content/ebook/${activeItem._id}`}
+                                    userEmail={user.email}
                                     productId={activeItem._id}
                                 />
+                            </div>
+                        ) : (
+                            <div className="flex justify-center">
+                                {fetchingFull ? (
+                                    <div className="py-20 text-center">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gold-energy mx-auto mb-4"></div>
+                                        <p className="text-gold-energy text-[9px] font-black tracking-widest uppercase">Initializing Discs...</p>
+                                    </div>
+                                ) : (
+                                    <SecureAudioPlayer
+                                        productId={activeItem._id}
+                                        title={activeItem.title}
+                                        chapters={fullProduct?.chapters || []}
+                                    />
+                                )}
                             </div>
                         )}
                     </motion.div>
@@ -138,7 +164,7 @@ const LibraryDashboard = () => {
                                 <motion.div
                                     key={product._id}
                                     whileHover={{ y: -10 }}
-                                    onClick={() => setActiveItem(product)}
+                                    onClick={() => openContent(product)}
                                     className="group cursor-pointer bg-white/[0.02] border border-white/5 p-8 rounded-[3rem] hover:bg-white/[0.05] hover:border-gold-energy/30 transition-all shadow-xl relative overflow-hidden"
                                 >
                                     {/* Icon Glow */}

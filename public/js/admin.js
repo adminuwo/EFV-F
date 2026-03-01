@@ -29,7 +29,13 @@ window.openProductModal = function (productId = null) {
 
     document.getElementById('admin-current-cover').innerHTML = '';
     document.getElementById('admin-current-ebook').innerHTML = '';
-    document.getElementById('admin-current-audio').innerHTML = '';
+
+    const chaptersContainer = document.getElementById('admin-chapters-container');
+    if (chaptersContainer) chaptersContainer.innerHTML = '';
+    const totalChaptersInput = document.getElementById('admin-prod-total-chapters');
+    if (totalChaptersInput) totalChaptersInput.value = '';
+
+    window._currentEditingProduct = null;
 
     // Reset file inputs
     const files = ['admin-file-cover', 'admin-file-ebook', 'admin-file-audio'];
@@ -81,8 +87,22 @@ window.editProduct = async function (productId) {
 
         if (product.thumbnail) document.getElementById('admin-current-cover').innerHTML = `<i class="fas fa-file-image"></i> Current: ${product.thumbnail.split('/').pop()}`;
         if (product.filePath && product.type === 'EBOOK') document.getElementById('admin-current-ebook').innerHTML = `<i class="fas fa-file-pdf"></i> Current: ${product.filePath.split('/').pop()}`;
-        if (product.filePath && product.type === 'AUDIOBOOK') document.getElementById('admin-current-audio').innerHTML = `<i class="fas fa-file-audio"></i> Current: ${product.filePath.split('/').pop()}`;
 
+        // Load Chapters if Audiobook
+        if (product.type === 'AUDIOBOOK') {
+            document.getElementById('admin-prod-total-chapters').value = product.totalChapters || (product.chapters ? product.chapters.length : 0);
+            const container = document.getElementById('admin-chapters-container');
+            if (container) {
+                container.innerHTML = '';
+                if (product.chapters && product.chapters.length > 0) {
+                    product.chapters.forEach((ch, idx) => {
+                        container.appendChild(window.createChapterCard(idx, ch));
+                    });
+                }
+            }
+        }
+
+        window._currentEditingProduct = product;
         window.toggleAdminFileFields(product.type);
     } catch (e) {
         console.error(e);
@@ -114,6 +134,124 @@ window.toggleAdminFileFields = function (type) {
     if (ebook) ebook.style.display = (type === 'EBOOK') ? 'block' : 'none';
     if (audio) audio.style.display = (type === 'AUDIOBOOK') ? 'block' : 'none';
     if (duration) duration.style.display = (type === 'AUDIOBOOK') ? 'block' : 'none';
+};
+
+// --- AUDIOBOOK CHAPTER HELPERS ---
+window.generateChapterCards = function () {
+    const totalInput = document.getElementById('admin-prod-total-chapters');
+    const total = parseInt(totalInput.value);
+    if (!total || total < 1) {
+        showToast("Please enter a valid number of chapters", "error");
+        return;
+    }
+
+    if (total > 100) {
+        showToast("Maximum 100 chapters allowed", "error");
+        return;
+    }
+
+    const container = document.getElementById('admin-chapters-container');
+    if (!container) return;
+
+    // Preserve existing data if possible
+    const existingData = [];
+    container.querySelectorAll('.chapter-card').forEach(card => {
+        const idx = card.dataset.index;
+        existingData[idx] = {
+            title: document.getElementById(`chapter-title-${idx}`).value,
+            // We can't easily preserve file inputs, but we can preserve the 'Current' label
+            currentFile: document.getElementById(`chapter-current-${idx}`).innerHTML
+        };
+    });
+
+    container.innerHTML = '';
+    for (let i = 0; i < total; i++) {
+        container.appendChild(window.createChapterCard(i, existingData[i]));
+    }
+    showToast(`Generated ${total} chapter slots`, "success");
+};
+
+window.createChapterCard = function (index, data = null) {
+    const div = document.createElement('div');
+    div.className = 'chapter-card glass-panel fade-in';
+    div.dataset.index = index;
+    div.style.padding = '15px';
+    div.style.border = '1px solid rgba(255,255,255,0.05)';
+    div.style.borderRadius = '12px';
+    div.style.background = 'rgba(255,255,255,0.02)';
+    div.style.transition = '0.3s';
+
+    const title = data ? (data.title || (data.chapterNumber ? data.title : '')) : '';
+    const currentFileHtml = data ? (data.currentFile || (data.filePath ? `<i class="fas fa-link"></i> ${data.filePath.split('/').pop()}` : '')) : '';
+
+    div.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid rgba(255,211,105,0.1); padding-bottom:8px;">
+            <span style="font-weight:700; color:var(--gold-text); font-size: 0.75rem; letter-spacing:1px;">CHAPTER ${index + 1}</span>
+            <span class="chapter-status" id="chapter-status-${index}" style="font-size: 0.65rem; opacity: 0.6; color: ${currentFileHtml ? '#2ecc71' : 'inherit'}">
+                ${currentFileHtml ? '✓ Uploaded' : 'Waiting...'}
+            </span>
+        </div>
+        <div class="p-form-group" style="margin-bottom:12px;">
+            <input type="text" id="chapter-title-${index}" class="p-input" value="${title}" placeholder=" " style="font-size:0.85rem; height:35px;">
+            <label class="p-label" style="font-size:0.7rem;">Chapter Title</label>
+        </div>
+        <div class="chapter-file-area" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+            <input type="file" id="chapter-audio-${index}" accept="audio/*" onchange="window.updateChapterFileStatus(${index})" 
+                style="width:100%; font-size:0.7rem; color:rgba(255,255,255,0.4); cursor:pointer;">
+            <div id="chapter-current-${index}" style="font-size: 0.65rem; color: var(--gold-text); margin-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                ${currentFileHtml}
+            </div>
+        </div>
+    `;
+
+    // Add hover effect
+    div.onmouseenter = () => div.style.borderColor = 'rgba(212,175,55,0.3)';
+    div.onmouseleave = () => div.style.borderColor = 'rgba(255,255,255,0.05)';
+
+    return div;
+};
+
+window.updateChapterFileStatus = function (index) {
+    const input = document.getElementById(`chapter-audio-${index}`);
+    const status = document.getElementById(`chapter-status-${index}`);
+    if (input && input.files.length > 0) {
+        status.textContent = '✓ Ready';
+        status.style.color = '#2ecc71';
+        status.style.opacity = '1';
+    }
+};
+
+window.handleBulkChapterUpload = function (input) {
+    const files = Array.from(input.files);
+    if (files.length === 0) return;
+
+    // Sort files numerically if they have numbers in name
+    files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+
+    const container = document.getElementById('admin-chapters-container');
+    let cards = container.querySelectorAll('.chapter-card');
+
+    // Auto-expand chapters if needed
+    const totalInput = document.getElementById('admin-prod-total-chapters');
+    if (cards.length < files.length) {
+        totalInput.value = files.length;
+        window.generateChapterCards();
+        cards = container.querySelectorAll('.chapter-card');
+    }
+
+    files.forEach((file, i) => {
+        if (cards[i]) {
+            const fileInput = document.getElementById(`chapter-audio-${i}`);
+            if (fileInput) {
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                fileInput.files = dt.files;
+                window.updateChapterFileStatus(i);
+            }
+        }
+    });
+
+    showToast(`Assigned ${files.length} files to chapters`, "success");
 };
 
 
@@ -1376,9 +1514,12 @@ function renderLibraryTab(directData = null) {
                     <h3 class="card-title">${item.name || item.title}</h3>
                     <p class="card-subtitle">Purchased: ${item.date || 'Recently'}</p>
                     ${progressHtml}
-                    <div class="card-actions" style="margin-top:auto; padding-top:10px;">
-                        <button class="btn-dashboard btn-primary" onclick="accessContent('${item.type}', '${(item.name || item.title).replace(/'/g, "\\'")}', '${prodId}')">
+                    <div class="card-actions" style="margin-top:auto; padding-top:10px; display:flex; gap:10px;">
+                        <button class="btn-dashboard btn-primary" onclick="accessContent('${item.type}', '${(item.name || item.title).replace(/'/g, "\\'")}', '${prodId}')" style="flex:1;">
                             <i class="fas ${icon}"></i> ${actionLabel}
+                        </button>
+                        <button class="btn-dashboard" onclick="removeFromLibrary('${prodId}')" style="background: rgba(255, 77, 77, 0.1); border: 1px solid rgba(255, 77, 77, 0.2); color: #ff4d4d; border-radius: 8px; width: 44px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; cursor: pointer;" onmouseenter="this.style.background='rgba(255,77,77,0.2)'" onmouseleave="this.style.background='rgba(255,77,77,0.1)'" title="Remove from Library">
+                            <i class="fas fa-trash-alt"></i>
                         </button>
                     </div>
                 </div>
@@ -1388,6 +1529,38 @@ function renderLibraryTab(directData = null) {
         container.innerHTML = cardsHtml.join('');
     });
 }
+
+window.removeFromLibrary = async function (prodId) {
+    if (!confirm('Are you sure you want to remove this item from your library? This will permanently delete it.')) return;
+
+    const token = localStorage.getItem('authToken');
+    try {
+        if (token) {
+            const res = await fetch(`${API_BASE}/api/library/my-library/${prodId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                console.log('✅ Item permanently removed from library backend');
+            } else {
+                const errData = await res.json().catch(() => ({}));
+                console.warn('Backend delete failed:', errData.message);
+            }
+        }
+    } catch (e) {
+        console.warn('Backend delete error:', e);
+    }
+
+    const libKey = getUserKey('efv_digital_library');
+    let library = JSON.parse(localStorage.getItem(libKey)) || [];
+    library = library.filter(item => {
+        const id = (item.productId || item.id || item._id || '').toString();
+        return id !== prodId.toString();
+    });
+    localStorage.setItem(libKey, JSON.stringify(library));
+    renderLibraryTab();
+    if (typeof updateStats === 'function') updateStats();
+};
 
 function updateStats() {
     const profile = window.currentUserProfile;
@@ -2444,21 +2617,57 @@ if (productForm) {
 
             const cover = document.getElementById('admin-file-cover').files[0];
             const ebook = document.getElementById('admin-file-ebook').files[0];
-            const audio = document.getElementById('admin-file-audio').files[0];
+            const productType = document.getElementById('admin-prod-type').value;
 
             if (cover) formData.append('cover', cover);
             if (ebook) formData.append('ebook', ebook);
-            if (audio) formData.append('audio', audio);
+
+            // Handle Chapter Uploads
+            if (productType === 'AUDIOBOOK') {
+                const chapterCards = document.querySelectorAll('.chapter-card');
+                chapterCards.forEach(card => {
+                    const index = card.dataset.index;
+                    const fileInput = document.getElementById(`chapter-audio-${index}`);
+                    if (fileInput && fileInput.files[0]) {
+                        formData.append(`chapter_${index}`, fileInput.files[0]);
+                    }
+                });
+            } else {
+                const audio = document.getElementById('admin-file-audio') ? document.getElementById('admin-file-audio').files[0] : null;
+                if (audio) formData.append('audio', audio);
+            }
 
             let uploadData = {};
-            if (cover || ebook || audio) {
+            // Check if any files are selected (including chapters)
+            let hasFiles = !!(cover || ebook);
+            if (productType === 'AUDIOBOOK') {
+                const chapterFiles = document.querySelectorAll('.chapter-card input[type="file"]');
+                for (let input of chapterFiles) {
+                    if (input.files.length > 0) {
+                        hasFiles = true;
+                        break;
+                    }
+                }
+            } else {
+                const audioInput = document.getElementById('admin-file-audio');
+                if (audioInput && audioInput.files.length > 0) hasFiles = true;
+            }
+
+            if (hasFiles) {
                 const uploadRes = await fetch(`${API_BASE}/api/upload`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` },
                     body: formData
                 });
+
+                const version = uploadRes.headers.get('X-Upload-Version');
+                console.log('📡 Server Upload Version:', version || 'OLD');
+
                 const result = await uploadRes.json();
                 if (!uploadRes.ok) {
+                    if (version !== '2.1') {
+                        throw new Error(`Outdated Server (Version: ${version || 'OLD'}). Please restart your backend terminal!`);
+                    }
                     throw new Error(result.message || 'File upload failed');
                 }
                 if (result.paths) uploadData = result.paths;
@@ -2467,21 +2676,24 @@ if (productForm) {
             const productId = document.getElementById('admin-prod-id').value;
             const isEdit = !!productId;
 
+            const getVal = (id) => document.getElementById(id)?.value || '';
+            const getNum = (id) => Number(document.getElementById(id)?.value) || 0;
+
             const productData = {
-                title: document.getElementById('admin-prod-title').value,
-                author: document.getElementById('admin-prod-author').value,
-                type: document.getElementById('admin-prod-type').value,
-                language: document.getElementById('admin-prod-lang').value || 'Hindi',
-                volume: document.getElementById('admin-prod-volume').value || '',
-                price: Number(document.getElementById('admin-prod-price').value),
-                discountPrice: Number(document.getElementById('admin-prod-discount-price').value) || null,
-                stock: Number(document.getElementById('admin-prod-stock').value) || 0,
-                weight: Number(document.getElementById('admin-prod-weight').value) || 0,
-                length: Number(document.getElementById('admin-prod-length').value) || 0,
-                breadth: Number(document.getElementById('admin-prod-width').value) || 0,
-                height: Number(document.getElementById('admin-prod-height').value) || 0,
-                duration: document.getElementById('admin-prod-duration').value || '',
-                description: document.getElementById('admin-prod-desc').value,
+                title: getVal('admin-prod-title'),
+                author: getVal('admin-prod-author'),
+                type: getVal('admin-prod-type'),
+                language: getVal('admin-prod-lang') || 'Hindi',
+                volume: getVal('admin-prod-volume'),
+                price: getNum('admin-prod-price'),
+                discountPrice: getNum('admin-prod-discount-price') || null,
+                stock: getNum('admin-prod-stock'),
+                weight: getNum('admin-prod-weight'),
+                length: getNum('admin-prod-length'),
+                breadth: getNum('admin-prod-width'),
+                height: getNum('admin-prod-height'),
+                duration: getVal('admin-prod-duration'),
+                description: getVal('admin-prod-desc'),
                 category: 'Digital'
             };
 
@@ -2489,8 +2701,37 @@ if (productForm) {
 
             if (productData.type === 'EBOOK' && uploadData.ebookPath) {
                 productData.filePath = uploadData.ebookPath;
-            } else if (productData.type === 'AUDIOBOOK' && uploadData.audioPath) {
-                productData.filePath = uploadData.audioPath;
+            } else if (productData.type === 'AUDIOBOOK') {
+                productData.totalChapters = Number(document.getElementById('admin-prod-total-chapters').value) || 0;
+
+                // Collect chapter metadata
+                const chapterCards = document.querySelectorAll('.chapter-card');
+                const chapters = [];
+                chapterCards.forEach(card => {
+                    const index = card.dataset.index;
+                    const title = document.getElementById(`chapter-title-${index}`).value || `Chapter ${Number(index) + 1}`;
+
+                    // If we have a new upload path from the server
+                    let filePath = '';
+                    if (uploadData.chapterPaths && uploadData.chapterPaths[index]) {
+                        filePath = uploadData.chapterPaths[index];
+                    } else if (window._currentEditingProduct && window._currentEditingProduct.chapters && window._currentEditingProduct.chapters[index]) {
+                        // Persist old path if not replaced
+                        filePath = window._currentEditingProduct.chapters[index].filePath;
+                    }
+
+                    chapters.push({
+                        chapterNumber: Number(index) + 1,
+                        title: title,
+                        filePath: filePath
+                    });
+                });
+                productData.chapters = chapters;
+
+                // For backward compatibility or single file view if needed
+                if (chapters.length > 0 && chapters[0].filePath) {
+                    productData.filePath = chapters[0].filePath;
+                }
             }
 
             const url = isEdit ? `${API_BASE}/api/products/${productId}` : `${API_BASE}/api/products`;

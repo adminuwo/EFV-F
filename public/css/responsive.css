@@ -816,14 +816,6 @@
 @media (hover: none) and (pointer: coarse) {
     *:hover {
         transform: none !important;
-        box-shadow: none !important;
-        filter: none !important;
-        background-color: unset !important;
-        color: unset !important;
-        border-color: unset !important;
-        opacity: 1 !important;
-        text-shadow: none !important;
-        letter-spacing: unset !important;
     }
 
     /* Keep active/focus styles but remove hover */

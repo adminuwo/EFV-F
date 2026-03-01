@@ -717,7 +717,12 @@ window.syncLibraryWithBackend = async function () {
             }));
             localStorage.setItem(libKey, JSON.stringify(localLibrary));
 
-            renderLibraryTab(localLibrary);
+            const activeSub = document.querySelector('.library-sub-tab.active');
+            if (activeSub) {
+                filterLibraryView(activeSub.dataset.libraryTab);
+            } else {
+                renderLibraryTab(localLibrary);
+            }
             updateStats();
         }
     } catch (error) { console.error('Library sync error:', error); }
@@ -850,9 +855,16 @@ window.deleteNotification = async function (event, id) {
         console.log("📥 Server response:", data);
 
         if (res.ok) {
-            // Success - profile data refresh in background to keep state in sync
-            // but no need to showing toast if it feels like a chore
             console.log("Successfully deleted from server");
+            // Also purge from in-memory profile so re-renders don't resurrect it
+            if (window.currentUserProfile && window.currentUserProfile.notifications) {
+                window.currentUserProfile.notifications = window.currentUserProfile.notifications.filter(n => {
+                    const nId = (n._id || n.id || '').toString();
+                    return nId !== id.toString() &&
+                        nId.replace(/-/g, '_') !== id.toString() &&
+                        nId.replace(/_/g, '-') !== id.toString();
+                });
+            }
         } else {
             console.error(`Delete fail (${res.status}):`, data);
             showToast(data.message || `Failed to delete from server`, 'error');
@@ -863,6 +875,33 @@ window.deleteNotification = async function (event, id) {
         console.error("Delete notification error:", e);
         // Re-fetch to bring back the item if it failed
         fetchProfileData();
+    }
+}
+
+// --- SET DEFAULT ADDRESS ---
+window.setAsDefaultAddress = async function (id) {
+    try {
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+
+        const res = await fetch(`${API_BASE}/api/users/address/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ isDefault: true })
+        });
+
+        if (res.ok) {
+            showToast('Default address updated!', 'success');
+            fetchProfileData();
+        } else {
+            showToast('Failed to update default address', 'error');
+        }
+    } catch (e) {
+        console.error("Set default address error:", e);
+        showToast('Error connecting to server', 'error');
     }
 }
 
@@ -884,10 +923,16 @@ window.renderSavedAddresses = function () {
         return;
     }
 
-    container.innerHTML = profile.savedAddresses.map(addr => `
-        <div class="address-card glass-panel ${addr.isDefault ? 'default' : ''}">
+    container.style.display = 'grid';
+    container.style.gap = '20px';
+    container.style.gridTemplateColumns = '1fr';
+
+    container.innerHTML = profile.savedAddresses.map(addr => {
+        const addrId = addr._id || addr.id;
+        return `
+        <div class="address-card ${addr.isDefault ? 'default' : ''}" style="margin-bottom: 25px; padding: 20px; border-radius: 12px; background: rgba(10, 10, 10, 0.4); border: 1px solid ${addr.isDefault ? '#FFD700' : 'rgba(255, 211, 105, 0.15)'}; box-shadow: none; cursor: ${addr.isDefault ? 'default' : 'pointer'};" ${!addr.isDefault ? `onclick="setAsDefaultAddress('${addrId}')"` : ''}>
             <h5 style="color:var(--gold-text); margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-                <span>${addr.type || 'Home'} ${addr.isDefault ? '<span class="default-badge">Default</span>' : ''}</span>
+                <span>${addr.type || 'Home'} ${addr.isDefault ? '<span class="default-badge" style="font-size: 0.65rem; background: #FFD700; color: black; padding: 2px 8px; border-radius: 4px; text-transform: uppercase;">Default</span>' : ''}</span>
                 <i class="fas ${addr.type === 'Work' ? 'fa-briefcase' : 'fa-home'}" style="opacity:0.3;"></i>
             </h5>
             <p class="address-text">
@@ -898,11 +943,13 @@ window.renderSavedAddresses = function () {
                 Phone: ${addr.phone}
             </p>
             <div class="address-actions" style="margin-top:15px; display:flex; gap:10px;">
-                <button class="btn btn-outline small" onclick="openAddressModal('${addr._id || addr.id}')">Edit</button>
-                <button class="btn btn-danger small" style="background:rgba(255,0,0,0.1); border-color:rgba(255,0,0,0.2); color:#ff6b6b;" onclick="deleteAddress('${addr._id || addr.id}')"><i class="fas fa-trash"></i></button>
+                ${!addr.isDefault ? `<button class="btn btn-outline small" onclick="event.stopPropagation(); setAsDefaultAddress('${addrId}')">Set Default</button>` : ''}
+                <button class="btn btn-outline small" onclick="event.stopPropagation(); openAddressModal('${addrId}')">Edit</button>
+                <button class="btn btn-danger small" style="background:rgba(255,0,0,0.1); border-color:rgba(255,0,0,0.2); color:#ff6b6b;" onclick="event.stopPropagation(); deleteAddress('${addrId}')"><i class="fas fa-trash"></i></button>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 // --- TAB RENDERING: ORDERS ---
@@ -998,7 +1045,7 @@ async function renderOrdersTab(filter = 'all') {
 
 // --- TAB RENDERING: LIBRARY ---
 // --- TAB RENDERING: LIBRARY ---
-function renderLibraryTab(directData = null) {
+function renderLibraryTab(directData = null, typeFilter = null) {
     const libKey = getUserKey('efv_digital_library');
     let library = directData || JSON.parse(localStorage.getItem(libKey)) || [];
 
@@ -1034,6 +1081,13 @@ function renderLibraryTab(directData = null) {
 
     const container = document.getElementById('dashboard-library-list');
     const emptyState = document.getElementById('library-empty-state');
+
+    // Apply type filter if specified
+    if (typeFilter === 'ebook') {
+        library = library.filter(item => !(item.type || '').toLowerCase().includes('audio'));
+    } else if (typeFilter === 'audio') {
+        library = library.filter(item => (item.type || '').toLowerCase().includes('audio'));
+    }
 
     if (library.length === 0) {
         container.innerHTML = '';
@@ -1078,9 +1132,12 @@ function renderLibraryTab(directData = null) {
                     <h3 class="card-title">${item.name || item.title}</h3>
                     <p class="card-subtitle">Purchased: ${item.date || 'Recently'}</p>
                     ${progressHtml}
-                    <div class="card-actions" style="margin-top:auto; padding-top:10px;">
-                        <button class="btn-dashboard btn-primary" onclick="accessContent('${item.type}', '${(item.name || item.title).replace(/'/g, "\\'")}', '${prodId}')">
+                    <div class="card-actions" style="margin-top:auto; padding-top:10px; display:flex; gap:10px;">
+                        <button class="btn-dashboard btn-primary" onclick="accessContent('${item.type}', '${(item.name || item.title).replace(/'/g, "\\'")}', '${prodId}')" style="flex:1;">
                             <i class="fas ${icon}"></i> ${actionLabel}
+                        </button>
+                        <button class="btn-dashboard" onclick="removeFromLibrary('${prodId}')" style="background: rgba(255, 77, 77, 0.1); border: 1px solid rgba(255, 77, 77, 0.2); color: #ff4d4d; border-radius: 8px; width: 44px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; cursor: pointer;" onmouseenter="this.style.background='rgba(255,77,77,0.2)'" onmouseleave="this.style.background='rgba(255,77,77,0.1)'" title="Remove from Library">
+                            <i class="fas fa-trash-alt"></i>
                         </button>
                     </div>
                 </div>
@@ -1090,6 +1147,44 @@ function renderLibraryTab(directData = null) {
         container.innerHTML = cardsHtml.join('');
     });
 }
+
+window.removeFromLibrary = async function (prodId) {
+    if (!confirm('Are you sure you want to remove this item from your library? This will permanently delete it.')) return;
+
+    const token = localStorage.getItem('authToken');
+    let backendSuccess = false;
+
+    try {
+        if (token) {
+            const res = await fetch(`${API_BASE}/api/library/my-library/${prodId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                backendSuccess = true;
+                console.log('✅ Item permanently removed from library backend');
+            } else {
+                const errData = await res.json().catch(() => ({}));
+                console.warn('Backend delete failed:', errData.message);
+                // Still remove from localStorage even if not found on backend
+            }
+        }
+    } catch (e) {
+        console.warn('Backend delete error:', e);
+    }
+
+    // Always remove from localStorage for instant UI update
+    const libKey = getUserKey('efv_digital_library');
+    let library = JSON.parse(localStorage.getItem(libKey)) || [];
+    library = library.filter(item => {
+        const id = (item.productId || item.id || item._id || '').toString();
+        return id !== prodId.toString();
+    });
+    localStorage.setItem(libKey, JSON.stringify(library));
+    renderLibraryTab();
+    if (typeof updateStats === 'function') updateStats();
+    if (backendSuccess) showToast('Item permanently removed from library', 'success');
+};
 
 function updateStats() {
     const profile = window.currentUserProfile;
@@ -1212,9 +1307,9 @@ window.renderCheckoutAddresses = function () {
         if (isSelected && !window.checkoutState.selectedAddressId) window.checkoutState.selectedAddressId = id;
 
         return `
-            <div class="checkout-address-card glass-panel ${isSelected ? 'selected' : ''}" 
+            <div class="checkout-address-card ${isSelected ? 'selected' : ''}" 
                  onclick="selectCheckoutAddress('${id}')" 
-                 style="padding: 20px; cursor: pointer; border: 1px solid ${isSelected ? 'var(--gold-text)' : 'rgba(255,255,255,0.05)'}; transition: all 0.2s; position: relative; border-radius: 12px;">
+                 style="padding: 20px; margin-bottom: 20px; cursor: pointer; background: rgba(10, 10, 10, 0.4); border: 1px solid ${isSelected ? 'var(--gold-text)' : 'rgba(255,255,255,0.05)'}; transition: all 0.2s; position: relative; border-radius: 12px; box-shadow: none;">
                 <div style="position: absolute; top: 15px; right: 15px;">
                     <i class="fas ${isSelected ? 'fa-check-circle' : 'fa-circle'}" style="color: ${isSelected ? 'var(--gold-text)' : 'rgba(255,255,255,0.1)'};"></i>
                 </div>
@@ -1848,64 +1943,368 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // --- AUDIOBOOK PLAYER IMPLEMENTATION (Resume Support) ---
-window.playAudiobook = async function (product) {
-    const bookId = product._id || product.id;
-    const playerModalId = 'audio-player-modal';
-    const resumeModalId = 'audio-resume-modal';
+// ═══════════════════════════════════════════════════════════════
+// EFV™ PREMIUM AUDIOBOOK EXPERIENCE — COMPLETE SYSTEM
+// ═══════════════════════════════════════════════════════════════
 
-    // Remove existing players
-    if (document.getElementById(playerModalId)) document.getElementById(playerModalId).remove();
+// Library sub-tab filter
+window.filterLibraryView = function (mode) {
+    document.querySelectorAll('.library-sub-tab').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.library-sub-tab[data-library-tab="${mode}"]`)?.classList.add('active');
+
+    const allGrid = document.getElementById('dashboard-library-list');
+    const audioGrid = document.getElementById('dashboard-audiobooks-list');
+
+    if (mode === 'all') {
+        allGrid.style.display = ''; audioGrid.style.display = 'none';
+        renderLibraryTab();
+    } else if (mode === 'ebooks') {
+        allGrid.style.display = ''; audioGrid.style.display = 'none';
+        renderLibraryTab(null, 'ebook');
+    } else if (mode === 'audiobooks') {
+        allGrid.style.display = 'none'; audioGrid.style.display = '';
+        renderAudiobooksGrid();
+    }
+};
+
+// ─── AUDIOBOOK LIBRARY CARDS GRID ────────────────────────────
+async function renderAudiobooksGrid() {
+    const libKey = getUserKey('efv_digital_library');
+    const library = JSON.parse(localStorage.getItem(libKey)) || [];
+    const audiobooks = library.filter(i => (i.type || '').toLowerCase().includes('audio'));
+    const container = document.getElementById('dashboard-audiobooks-list');
+    const emptyState = document.getElementById('library-empty-state');
+
+    if (audiobooks.length === 0) {
+        container.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+    }
+    emptyState.classList.add('hidden');
 
     const token = localStorage.getItem('authToken');
 
-    // 1. Fetch saved progress (API or LocalStorage)
-    let savedState = await fetchProgress(bookId);
-    if (!savedState) {
-        const local = localStorage.getItem(`audiobook_${bookId}_progress`);
-        if (local) savedState = JSON.parse(local);
+    const cards = await Promise.all(audiobooks.map(async (item) => {
+        const prodId = item.productId || item.id || item._id;
+        let totalChapters = 0, completedChapters = 0, remainingChapters = 0;
+        let lastChapterIdx = 0, lastChapterTime = 0;
+
+        // Fetch product for chapter info
+        let productData = null;
+        let itemPrice = 'Purchased';
+        try {
+            const pRes = await fetch(`${API_BASE}/api/products/${prodId}`);
+            if (pRes.ok) productData = await pRes.json();
+        } catch (e) { }
+
+        if (productData) {
+            totalChapters = (productData.chapters || []).filter(c => c.filePath).length || productData.totalChapters || 0;
+            itemPrice = productData.discountPrice ? `₹${productData.discountPrice}` : (productData.price ? `₹${productData.price}` : 'Purchased');
+        }
+
+        // Fetch chapter-level progress
+        let abProgress = null;
+        try {
+            const apRes = await fetch(`${API_BASE}/api/audiobook-progress/${prodId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (apRes.ok) abProgress = await apRes.json();
+        } catch (e) { }
+
+        if (abProgress && abProgress.chapters) {
+            completedChapters = abProgress.totalCompletedChapters || abProgress.chapters.filter(c => c.completed).length;
+            lastChapterIdx = abProgress.currentChapterIndex || 0;
+            lastChapterTime = abProgress.currentChapterTime || 0;
+        }
+        remainingChapters = Math.max(0, totalChapters - completedChapters);
+        const progressPercent = totalChapters > 0 ? Math.round((completedChapters / totalChapters) * 100) : 0;
+
+        // Thumbnail resolution
+        let thumbUrl = item.thumbnail || 'img/vol1-cover.png';
+        if (thumbUrl && !thumbUrl.startsWith('http') && !thumbUrl.startsWith('img/')) {
+            thumbUrl = `${API_BASE}/${thumbUrl}`;
+        }
+
+        const hasProgress = lastChapterTime > 0 || completedChapters > 0;
+        const continueLabel = hasProgress ? `<i class="fas fa-play"></i> Continue Listening` : `<i class="fas fa-headphones"></i> Start Listening`;
+
+        return `
+            <div class="audiobook-card fade-in">
+                <div class="audiobook-card-inner">
+                    <img src="${thumbUrl}" alt="${item.name || item.title}" class="audiobook-card-cover" onerror="this.src='img/vol1-cover.png'">
+                    <div class="audiobook-card-info">
+                        <h3 class="audiobook-card-title">${item.name || item.title}</h3>
+                        ${item.language ? `<span style="display:inline-block; background:rgba(212,175,55,0.12); border:1px solid rgba(255,211,105,0.2); color:var(--gold-text); padding:2px 8px; border-radius:4px; font-size:0.65rem; font-weight:700; text-transform:uppercase; margin-bottom:6px; width:fit-content;">${item.language} Edition</span>` : ''}
+                        <div class="audiobook-card-price" style="font-size: 0.9rem; color: var(--gold-text); font-weight: 700; margin-bottom: 8px;">${itemPrice}</div>
+                        <div class="audiobook-card-stats">
+                            <span class="audiobook-stat-pill"><i class="fas fa-list-ol"></i> ${totalChapters} Chapters</span>
+                            <span class="audiobook-stat-pill"><i class="fas fa-check-circle"></i> ${completedChapters} Done</span>
+                            <span class="audiobook-stat-pill"><i class="fas fa-hourglass-half"></i> ${remainingChapters} Left</span>
+                        </div>
+                        <div class="audiobook-card-progress">
+                            <div class="audiobook-progress-bar-wrap">
+                                <div class="audiobook-progress-bar-fill" style="width: ${progressPercent}%"></div>
+                            </div>
+                            <div class="audiobook-progress-text">
+                                <span>${progressPercent}% Complete</span>
+                                <span>${completedChapters}/${totalChapters}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="audiobook-card-actions">
+                    <button class="btn-continue-listening" onclick="launchEFVPlayer('${prodId}', 0)">
+                        ${continueLabel}
+                    </button>
+                    <button class="btn-chapters-view" onclick="openAudiobookDetail('${prodId}', true)">
+                        <i class="fas fa-list"></i> Chapters
+                    </button>
+                </div>
+            </div>
+        `;
+    }));
+
+    container.innerHTML = cards.join('');
+}
+
+// ─── BOOK DETAIL SCREEN ──────────────────────────────────────
+window.openAudiobookDetail = async function (productId, scrollToChapters = false) {
+    const existing = document.getElementById('audiobook-detail-overlay');
+    if (existing) existing.remove();
+
+    const token = localStorage.getItem('authToken');
+    let product = null;
+
+    try {
+        const res = await fetch(`${API_BASE}/api/products/${productId}`);
+        if (res.ok) product = await res.json();
+        if (!product) throw new Error('Not found');
+    } catch (e) {
+        alert('Failed to load audiobook details.');
+        return;
     }
 
-    // 2. Main Player UI
-    const audioHtml = `
-        <div id="${playerModalId}" class="reader-overlay">
-            <div class="reader-toolbar glass-panel">
-                <div class="reader-title"><i class="fas fa-headphones"></i> ${product.name}</div>
-                <button class="btn-icon" onclick="closeAudioPlayer()" title="Close"><i class="fas fa-times"></i></button>
+    const chapters = (product.chapters || []).filter(c => c.filePath).sort((a, b) => a.chapterNumber - b.chapterNumber);
+    const totalChapters = chapters.length;
+
+    // Fetch progress
+    let abProgress = null;
+    try {
+        const apRes = await fetch(`${API_BASE}/api/audiobook-progress/${productId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (apRes.ok) abProgress = await apRes.json();
+    } catch (e) { }
+
+    const completedChapters = abProgress?.totalCompletedChapters || (abProgress?.chapters || []).filter(c => c.completed).length || 0;
+    const progressPercent = totalChapters > 0 ? Math.round((completedChapters / totalChapters) * 100) : 0;
+
+    // Thumbnail
+    let thumbUrl = product.thumbnail || 'img/vol1-cover.png';
+    if (thumbUrl && !thumbUrl.startsWith('http') && !thumbUrl.startsWith('img/')) {
+        thumbUrl = `${API_BASE}/${thumbUrl}`;
+    }
+
+    // Chapter cards HTML
+    const chapterCards = chapters.map((ch, idx) => {
+        const chProgress = abProgress?.chapters?.find(c => c.chapterIndex === idx);
+        const isCompleted = chProgress?.completed || false;
+        const chDuration = ch.duration || '--:--';
+
+        return `
+            <div class="chapter-card ${isCompleted ? 'completed' : ''}" onclick="launchEFVPlayer('${productId}', ${idx})" id="chapter-card-${idx}">
+                <div class="chapter-num">${idx + 1}</div>
+                <div class="chapter-info">
+                    <h4 class="chapter-title">${ch.title || ('Chapter ' + (idx + 1))}</h4>
+                    <div class="chapter-duration"><i class="fas fa-clock"></i> ${chDuration}</div>
+                </div>
+                <button class="chapter-play-btn" onclick="event.stopPropagation(); launchEFVPlayer('${productId}', ${idx})">
+                    <i class="fas fa-play"></i>
+                </button>
             </div>
-            
-            <div class="reader-canvas-container" style="justify-content: center; align-items: center;">
-                <div class="dashboard-card" style="max-width: 400px; padding: 40px; text-align: center; background: rgba(255,255,255,0.02);">
-                    <img src="${getImageForProduct(product.name)}" style="width: 200px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 30px;">
-                    <h2 style="color: var(--gold-text); margin-bottom: 20px;">${product.name}</h2>
-                    
-                    <div id="audio-progress-info" style="margin-bottom: 20px; font-size: 0.9rem; opacity: 0.8;">
-                        <div class="reader-spinner" id="audio-loader" style="width: 30px; height: 30px;"></div>
-                        <p id="audio-status-text">Synchronizing Stream...</p>
+        `;
+    }).join('');
+
+    const overlayHTML = `
+        <div id="audiobook-detail-overlay" class="audiobook-detail-overlay">
+            <div class="ab-detail-header">
+                <div class="ab-detail-header-title">
+                    <i class="fas fa-headphones"></i> AUDIOBOOK
+                </div>
+                <button class="ab-detail-close" onclick="document.getElementById('audiobook-detail-overlay').remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="ab-detail-body">
+                <div class="ab-detail-hero">
+                    <img src="${thumbUrl}" alt="${product.title}" class="ab-detail-cover" onerror="this.src='img/vol1-cover.png'">
+                    <h2 class="ab-detail-title">${product.title}</h2>
+                    <div class="ab-detail-meta">
+                        <div class="ab-detail-meta-item"><i class="fas fa-list-ol"></i> <strong>${totalChapters}</strong> Chapters</div>
+                        <div class="ab-detail-meta-item"><i class="fas fa-check-double"></i> <strong>${completedChapters}</strong> Completed</div>
+                        ${product.duration ? `<div class="ab-detail-meta-item"><i class="fas fa-clock"></i> <strong>${product.duration}</strong></div>` : ''}
                     </div>
 
-                    <audio id="efv-audio-player" 
-                        src="${CONTENT_CONFIG.contentApi}/audio/${bookId}?token=${token || ''}&t=${Date.now()}"
-                        style="width: 100%; filter: invert(1) hue-rotate(180deg);" 
-                        controls controlsList="nodownload">
-                    </audio>
+                    <div class="ab-detail-progress-wrap">
+                        <div class="ab-detail-progress-label">
+                            <span>Reading Progress</span>
+                            <span>${progressPercent}%</span>
+                        </div>
+                        <div class="ab-detail-progress-track">
+                            <div class="ab-detail-progress-fill" style="width: ${progressPercent}%"></div>
+                        </div>
+                    </div>
 
-                    <p style="margin-top: 30px; font-size: 0.8rem; opacity: 0.4;">
-                        <i class="fas fa-lock"></i> Encrypted Content Stream
-                    </p>
+                    <div class="ab-detail-actions">
+                        <button class="btn-view-chapters" onclick="document.getElementById('chapters-section-anchor').scrollIntoView({behavior:'smooth'})">
+                            <i class="fas fa-list"></i> View All Chapters
+                        </button>
+                    </div>
+                </div>
+
+                <div class="ab-chapters-section" id="chapters-section-anchor">
+                    <div class="ab-chapters-heading">
+                        <span>All Chapters (${totalChapters})</span>
+                    </div>
+                    <div class="ab-chapters-list">
+                        ${chapterCards.length > 0 ? chapterCards : '<p style="color:rgba(255,255,255,0.4); text-align:center; padding:30px;">No chapters uploaded yet.</p>'}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', overlayHTML);
+
+    if (scrollToChapters) {
+        setTimeout(() => {
+            document.getElementById('chapters-section-anchor')?.scrollIntoView({ behavior: 'smooth' });
+        }, 500);
+    }
+};
+
+// ─── EFV PREMIUM AUDIO PLAYER ────────────────────────────────
+window.launchEFVPlayer = async function (productId, chapterIndex = 0) {
+    const existingPlayer = document.getElementById('efv-premium-player');
+    if (existingPlayer) existingPlayer.remove();
+
+    const token = localStorage.getItem('authToken');
+
+    // Fetch product
+    let product = null;
+    try {
+        const res = await fetch(`${API_BASE}/api/products/${productId}`);
+        if (res.ok) product = await res.json();
+    } catch (e) { }
+    if (!product) { alert('Failed to load audiobook.'); return; }
+
+    const chapters = (product.chapters || []).filter(c => c.filePath).sort((a, b) => a.chapterNumber - b.chapterNumber);
+    if (chapters.length === 0) { alert('No chapters available.'); return; }
+
+    // Fetch chapter progress
+    let abProgress = null;
+    try {
+        const apRes = await fetch(`${API_BASE}/api/audiobook-progress/${productId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (apRes.ok) abProgress = await apRes.json();
+    } catch (e) { }
+
+    // Check resume for click on "Continue Listening" (chapterIndex 0 pass-through) or specific chapter
+    let initialChapter = chapterIndex;
+    let initialTime = 0;
+
+    // Explicitly fetching the requested chapter's time if they clicked a chapter
+    if (abProgress && abProgress.chapters) {
+        const chProg = abProgress.chapters.find(c => c.chapterIndex === chapterIndex);
+        if (chProg && chProg.currentTime > 1) {
+            initialTime = chProg.currentTime;
+        }
+    }
+
+    // Default "Continue Listening" passthrough override if chapterIndex 0 is passed but progress says they are on a later chapter
+    if (chapterIndex === 0 && abProgress && abProgress.currentChapterIndex !== undefined) {
+        if (abProgress.currentChapterIndex > 0 || (abProgress.currentChapterTime && abProgress.currentChapterTime > 1)) {
+            const savedChIdx = abProgress.currentChapterIndex || 0;
+            const savedTime = abProgress.currentChapterTime || 0;
+            // Only override if we are truly hitting the Continue Listening default route 
+            // AND we actually have significant progress saved.
+            if (savedTime > 1 || savedChIdx > 0) {
+                initialChapter = savedChIdx;
+                initialTime = savedTime;
+            }
+        }
+    }
+
+    // Thumbnail
+    let thumbUrl = product.thumbnail || 'img/vol1-cover.png';
+    if (thumbUrl && !thumbUrl.startsWith('http') && !thumbUrl.startsWith('img/')) {
+        thumbUrl = `${API_BASE}/${thumbUrl}`;
+    }
+
+    const currentChapter = chapters[initialChapter] || chapters[0];
+    const chTitle = currentChapter.title || `Chapter ${initialChapter + 1}`;
+
+    const playerHTML = `
+        <div id="efv-premium-player" class="efv-audio-player-overlay" oncontextmenu="return false;">
+            <div class="efv-player-toolbar">
+                <div class="efv-player-toolbar-left">
+                    <i class="fas fa-headphones"></i>
+                    <span>EFV™ AUDIO PLAYER</span>
+                </div>
+                <button class="ab-detail-close" id="efv-player-close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="efv-player-body">
+                <img src="${thumbUrl}" alt="${product.title}" class="efv-player-cover" id="efv-player-cover" onerror="this.src='img/vol1-cover.png'">
+
+                <h2 class="efv-player-chapter-title" id="efv-player-ch-title">${chTitle}</h2>
+                <p class="efv-player-book-title">${product.title}</p>
+
+                <div class="efv-player-seek-container">
+                    <div class="efv-player-time-row">
+                        <span id="efv-time-current">0:00</span>
+                        <span id="efv-time-total">0:00</span>
+                    </div>
+                    <input type="range" class="efv-seek-bar" id="efv-seek-bar" min="0" max="100" value="0" step="0.1">
+                </div>
+
+                <div class="efv-player-controls">
+                    <button class="efv-ctrl-btn" id="efv-btn-prev" title="Previous Chapter"><i class="fas fa-step-backward"></i></button>
+                    <button class="efv-ctrl-btn" title="Rewind 10s" id="efv-btn-rwd"><i class="fas fa-undo"></i></button>
+                    <button class="efv-play-btn" id="efv-btn-play"><i class="fas fa-play" id="efv-play-icon"></i></button>
+                    <button class="efv-ctrl-btn" title="Forward 10s" id="efv-btn-fwd"><i class="fas fa-redo"></i></button>
+                    <button class="efv-ctrl-btn" id="efv-btn-next" title="Next Chapter"><i class="fas fa-step-forward"></i></button>
+                </div>
+
+                <div class="efv-speed-control">
+                    <span class="efv-speed-label">Speed</span>
+                    <div class="efv-speed-options">
+                        <button class="efv-speed-btn active" data-speed="1">1x</button>
+                        <button class="efv-speed-btn" data-speed="1.5">1.5x</button>
+                        <button class="efv-speed-btn" data-speed="2">2x</button>
+                    </div>
+                </div>
+
+                <div class="efv-player-chapter-indicator" id="efv-ch-indicator">
+                    Chapter ${initialChapter + 1} of ${chapters.length}
                 </div>
             </div>
 
-            <!-- Professional Resume Modal overlay -->
-            <div id="${resumeModalId}" class="resume-modal-overlay">
+            <!-- Resume Modal -->
+            <div id="efv-resume-overlay" class="resume-modal-overlay" style="z-index:10003;">
                 <div class="resume-modal">
                     <i class="fas fa-headphones"></i>
                     <h3>Continue Listening?</h3>
-                    <p>You previously listened up to <span id="resume-time-display" style="color:white; font-weight:bold;">0:00</span>.<br>Continue from where you left off?</p>
+                    <p>You previously listened up to <span id="efv-resume-time" style="color:white; font-weight:bold;">0:00</span>.<br>Continue from where you left off?</p>
                     <div class="resume-actions">
-                        <button id="btn-audio-resume" class="btn-resume-primary">
-                            <i class="fas fa-play"></i> Continue from <span id="resume-btn-time">0:00</span>
+                        <button id="efv-btn-resume" class="btn-resume-primary">
+                            <i class="fas fa-play"></i> Continue from <span id="efv-resume-btn-time">0:00</span>
                         </button>
-                        <button id="btn-audio-restart" class="btn-resume-secondary">
+                        <button id="efv-btn-restart" class="btn-resume-secondary">
                             <i class="fas fa-redo"></i> Start from Beginning
                         </button>
                     </div>
@@ -1913,111 +2312,364 @@ window.playAudiobook = async function (product) {
             </div>
         </div>
     `;
-    document.body.insertAdjacentHTML('beforeend', audioHtml);
-    if (window.efvSecurity) {
-        window.efvSecurity.isTampered = false;
-        window.efvSecurity.enable(); // Actively start protection
-        window.efvSecurity.applyWatermark(document.getElementById(playerModalId));
-    }
-    document.getElementById(playerModalId).classList.add('no-select');
+
+    document.body.insertAdjacentHTML('beforeend', playerHTML);
     document.body.classList.add('modal-open');
 
-    const audio = document.getElementById('efv-audio-player');
-    const statusText = document.getElementById('audio-status-text');
-    const loader = document.getElementById('audio-loader');
-    const resumeOverlay = document.getElementById(resumeModalId);
+    // --- Player State ---
+    let currentChIdx = initialChapter;
+    let audioEl = new Audio();
+    audioEl.crossOrigin = 'anonymous';
+    let isSeeking = false;
+    let saveTimer = null;
 
-    let saveInterval = null;
+    // Prevent context menu on audio
+    audioEl.addEventListener('contextmenu', e => e.preventDefault());
 
-    // 3. Save Logic helper
-    const saveProgress = () => {
-        if (audio.currentTime < 1) return;
+    // DOM refs
+    const playIcon = document.getElementById('efv-play-icon');
+    const playBtn = document.getElementById('efv-btn-play');
+    const seekBar = document.getElementById('efv-seek-bar');
+    const timeCurrent = document.getElementById('efv-time-current');
+    const timeTotal = document.getElementById('efv-time-total');
+    const playerCover = document.getElementById('efv-player-cover');
+    const chTitleEl = document.getElementById('efv-player-ch-title');
+    const chIndicator = document.getElementById('efv-ch-indicator');
+    const resumeOverlay = document.getElementById('efv-resume-overlay');
 
-        const progressData = {
-            currentTime: audio.currentTime,
-            totalDuration: audio.duration || 0,
-            progress: (audio.currentTime / (audio.duration || 1)) * 100
+    // --- Load Chapter ---
+    function loadChapter(idx, startTime = 0, autoPlay = true) {
+        if (idx < 0 || idx >= chapters.length) return;
+        currentChIdx = idx;
+
+        const chapterSrc = `${CONTENT_CONFIG.contentApi}/chapter/${productId}/${idx}?token=${token}&t=${Date.now()}`;
+        audioEl.src = chapterSrc;
+        audioEl.load();
+
+        const ch = chapters[idx];
+        chTitleEl.textContent = ch.title || `Chapter ${idx + 1}`;
+        chIndicator.textContent = `Chapter ${idx + 1} of ${chapters.length}`;
+
+        // Update nav buttons
+        document.getElementById('efv-btn-prev').disabled = idx === 0;
+        document.getElementById('efv-btn-next').disabled = idx === chapters.length - 1;
+
+        // Highlight in detail overlay if open
+        document.querySelectorAll('.chapter-card').forEach(c => c.classList.remove('playing'));
+        const activeCard = document.getElementById(`chapter-card-${idx}`);
+        if (activeCard) activeCard.classList.add('playing');
+
+        seekBar.value = 0;
+        seekBar.style.background = 'rgba(255, 255, 255, 0.1)';
+        timeCurrent.textContent = '0:00';
+        timeTotal.textContent = '0:00';
+
+        audioEl.addEventListener('loadedmetadata', function onMeta() {
+            audioEl.removeEventListener('loadedmetadata', onMeta);
+            timeTotal.textContent = formatTime(audioEl.duration);
+            if (startTime > 0) audioEl.currentTime = startTime;
+            if (autoPlay) audioEl.play().catch(() => { });
+        });
+    }
+
+    // --- Save chapter progress ---
+    function saveChapterProgress(forceComplete = false) {
+        if (!audioEl.src || audioEl.currentTime < 0.5) return;
+
+        const completed = forceComplete || (audioEl.duration > 0 && (audioEl.currentTime / audioEl.duration) > 0.95);
+
+        const data = {
+            chapterIndex: currentChIdx,
+            currentTime: audioEl.currentTime,
+            duration: audioEl.duration || 0,
+            completed
         };
 
-        console.log(`💾 Progress Saving | ${formatTime(audio.currentTime)} | ${progressData.progress.toFixed(1)}%`);
+        fetch(`${API_BASE}/api/audiobook-progress/${productId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(data)
+        }).catch(e => console.error('Save chapter progress error:', e));
 
-        // Clear if finished (> 95%)
-        if (progressData.progress > 95) {
-            console.log("🏁 Audiobook finished, resetting progress.");
-            if (token) syncProgress(bookId, 'AUDIOBOOK', { currentTime: 0, progress: 0 });
-            localStorage.removeItem(`audiobook_${bookId}_progress`);
-            return;
+        // Also update generic progress for dashboard cards
+        const totalChapters = chapters.length;
+        const overallProgress = totalChapters > 0 ? ((currentChIdx + (audioEl.currentTime / (audioEl.duration || 1))) / totalChapters) * 100 : 0;
+        syncProgress(productId, 'AUDIOBOOK', {
+            currentTime: audioEl.currentTime,
+            totalDuration: audioEl.duration || 0,
+            progress: Math.min(overallProgress, 100)
+        });
+    }
+
+    // --- Event Listeners ---
+    audioEl.addEventListener('timeupdate', () => {
+        if (isSeeking) return;
+        timeCurrent.textContent = formatTime(audioEl.currentTime);
+        if (audioEl.duration) {
+            const percentage = (audioEl.currentTime / audioEl.duration) * 100;
+            seekBar.value = percentage;
+            seekBar.style.background = `linear-gradient(to right, #FFD700 0%, #FFD700 ${percentage}%, rgba(255, 255, 255, 0.1) ${percentage}%, rgba(255, 255, 255, 0.1) 100%)`;
         }
+    });
 
-        // Save to Local
-        localStorage.setItem(`audiobook_${bookId}_progress`, JSON.stringify(progressData));
+    audioEl.addEventListener('play', () => {
+        playIcon.className = 'fas fa-pause';
+        playerCover.classList.add('is-playing');
+        saveTimer = setInterval(() => saveChapterProgress(), 5000);
+    });
 
-        // Save to Backend if logged in
-        if (token) {
-            syncProgress(bookId, 'AUDIOBOOK', progressData);
+    audioEl.addEventListener('pause', () => {
+        playIcon.className = 'fas fa-play';
+        playerCover.classList.remove('is-playing');
+        if (saveTimer) clearInterval(saveTimer);
+        saveChapterProgress();
+    });
+
+    // Save on tab switch / minimize
+    document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === 'hidden' && audioEl) {
+            saveChapterProgress();
+        }
+    });
+
+    audioEl.addEventListener('ended', () => {
+        saveChapterProgress(true);
+        // Auto-advance to next chapter
+        if (currentChIdx < chapters.length - 1) {
+            loadChapter(currentChIdx + 1, 0, true);
+        } else {
+            playIcon.className = 'fas fa-play';
+            playerCover.classList.remove('is-playing');
+        }
+    });
+
+    // Seek bar interaction
+    seekBar.addEventListener('input', () => {
+        isSeeking = true;
+        const seekTime = (seekBar.value / 100) * (audioEl.duration || 0);
+        timeCurrent.textContent = formatTime(seekTime);
+        const percentage = seekBar.value;
+        seekBar.style.background = `linear-gradient(to right, #FFD700 0%, #FFD700 ${percentage}%, rgba(255, 255, 255, 0.1) ${percentage}%, rgba(255, 255, 255, 0.1) 100%)`;
+    });
+
+    seekBar.addEventListener('change', () => {
+        const seekTime = (seekBar.value / 100) * (audioEl.duration || 0);
+        audioEl.currentTime = seekTime;
+        isSeeking = false;
+    });
+
+    // Play/Pause
+    playBtn.addEventListener('click', () => {
+        if (audioEl.paused) audioEl.play().catch(() => { });
+        else audioEl.pause();
+    });
+
+    // Rewind/Forward 10s
+    document.getElementById('efv-btn-rwd').addEventListener('click', () => {
+        audioEl.currentTime = Math.max(0, audioEl.currentTime - 10);
+    });
+    document.getElementById('efv-btn-fwd').addEventListener('click', () => {
+        audioEl.currentTime = Math.min(audioEl.duration || 0, audioEl.currentTime + 10);
+    });
+
+    // Prev/Next chapter
+    document.getElementById('efv-btn-prev').addEventListener('click', () => {
+        if (currentChIdx > 0) {
+            saveChapterProgress();
+            loadChapter(currentChIdx - 1, 0, true);
+        }
+    });
+    document.getElementById('efv-btn-next').addEventListener('click', () => {
+        if (currentChIdx < chapters.length - 1) {
+            saveChapterProgress();
+            loadChapter(currentChIdx + 1, 0, true);
+        }
+    });
+
+    // Speed controls
+    document.querySelectorAll('.efv-speed-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.efv-speed-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            audioEl.playbackRate = parseFloat(btn.dataset.speed);
+        });
+    });
+
+    // Close player
+    document.getElementById('efv-player-close-btn').addEventListener('click', () => {
+        saveChapterProgress();
+        if (saveTimer) clearInterval(saveTimer);
+        audioEl.pause();
+        audioEl.src = '';
+        document.getElementById('efv-premium-player').remove();
+        document.body.classList.remove('modal-open');
+        // Refresh library and detail views
+        renderLibraryTab();
+        if (document.querySelector('.library-sub-tab[data-library-tab="audiobooks"].active')) {
+            renderAudiobooksGrid();
+        }
+    });
+
+    // Escape key
+    const escHandler = (e) => {
+        if (e.key === 'Escape' && document.getElementById('efv-premium-player')) {
+            document.getElementById('efv-player-close-btn').click();
+            document.removeEventListener('keydown', escHandler);
         }
     };
+    document.addEventListener('keydown', escHandler);
 
-    // 4. Initialization & Meta
-    audio.addEventListener('loadedmetadata', () => {
-        loader.style.display = 'none';
-        statusText.textContent = "Ready: " + formatTime(audio.duration);
+    // Save on page unload via old robust method too
+    window.addEventListener('beforeunload', () => saveChapterProgress());
 
-        console.log("🔍 Syncing saved progress:", savedState);
+    // --- Resume Modal Logic ---
+    if (initialTime > 1) {
+        document.getElementById('efv-resume-time').textContent = formatTime(initialTime);
+        document.getElementById('efv-resume-btn-time').textContent = formatTime(initialTime);
+        resumeOverlay.classList.add('active');
 
-        // Check if worth resuming (>1s and <95%)
-        if (savedState && savedState.currentTime > 1) {
-            const hasFinished = (savedState.currentTime / audio.duration) > 0.95;
-            if (!hasFinished) {
-                console.log(`🎯 Found resume point at ${formatTime(savedState.currentTime)}`);
-                document.getElementById('resume-time-display').textContent = formatTime(savedState.currentTime);
-                document.getElementById('resume-btn-time').textContent = formatTime(savedState.currentTime);
-                resumeOverlay.classList.add('active');
-            } else {
-                audio.play().catch(() => { });
+        document.getElementById('efv-btn-resume').addEventListener('click', () => {
+            resumeOverlay.classList.remove('active');
+            loadChapter(initialChapter, initialTime, true);
+        });
+        document.getElementById('efv-btn-restart').addEventListener('click', () => {
+            resumeOverlay.classList.remove('active');
+            loadChapter(initialChapter, 0, true);
+        });
+    } else {
+        resumeOverlay.classList.remove('active');
+        loadChapter(initialChapter, 0, true);
+    }
+};
+
+// ─── LEGACY FALLBACK: playAudiobook (for non-chapter audiobooks) ──
+window.playAudiobook = async function (product) {
+    const bookId = product._id || product.id;
+    const token = localStorage.getItem('authToken');
+
+    // Try to detect chapter-based audiobook
+    try {
+        const res = await fetch(`${API_BASE}/api/products/${bookId}`);
+        if (res.ok) {
+            const fullProduct = await res.json();
+            const hasChapters = (fullProduct.chapters || []).filter(c => c.filePath).length > 0;
+            if (hasChapters) {
+                // Use the premium chapter-based player
+                openAudiobookDetail(bookId);
+                return;
             }
-        } else {
-            audio.play().catch(() => { });
         }
-    });
+    } catch (e) { }
 
-    // 5. Playback Listeners
-    audio.addEventListener('play', () => {
-        saveInterval = setInterval(saveProgress, 5000);
-    });
+    // Fallback for legacy single-file audiobooks — minimal player
+    const playerModalId = 'audio-player-modal';
+    const resumeModalId = 'audio-resume-modal';
+    if (document.getElementById(playerModalId)) document.getElementById(playerModalId).remove();
 
-    audio.addEventListener('pause', () => {
-        if (saveInterval) clearInterval(saveInterval);
-        saveProgress();
-    });
+    let savedState = await fetchProgress(bookId);
+    if (!savedState) {
+        const local = localStorage.getItem(`audiobook_${bookId}_progress`);
+        if (local) savedState = JSON.parse(local);
+    }
 
-    // 6. Resume Modal Actions
-    document.getElementById('btn-audio-resume').addEventListener('click', () => {
-        audio.currentTime = savedState.currentTime;
-        resumeOverlay.classList.remove('active');
-        audio.play();
-    });
+    // Thumbnail
+    let thumbUrl = product.thumbnail || getImageForProduct(product.name);
+    if (thumbUrl && !thumbUrl.startsWith('http') && !thumbUrl.startsWith('img/')) {
+        thumbUrl = `${API_BASE}/${thumbUrl}`;
+    }
 
-    document.getElementById('btn-audio-restart').addEventListener('click', () => {
-        audio.currentTime = 0;
-        resumeOverlay.classList.remove('active');
-        localStorage.removeItem(`audiobook_${bookId}_progress`);
-        audio.play();
-    });
+    const audioHtml = `
+        <div id="${playerModalId}" class="efv-audio-player-overlay" oncontextmenu="return false;">
+            <div class="efv-player-toolbar">
+                <div class="efv-player-toolbar-left"><i class="fas fa-headphones"></i> <span>${product.name}</span></div>
+                <button class="ab-detail-close" onclick="closeLegacyPlayer()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="efv-player-body">
+                <img src="${thumbUrl}" class="efv-player-cover" onerror="this.src='img/vol1-cover.png'">
+                <h2 class="efv-player-chapter-title">${product.name}</h2>
+                <div class="efv-player-seek-container">
+                    <div class="efv-player-time-row">
+                        <span id="legacy-time-cur">0:00</span>
+                        <span id="legacy-time-total">0:00</span>
+                    </div>
+                    <input type="range" class="efv-seek-bar" id="legacy-seek" min="0" max="100" value="0" step="0.1">
+                </div>
+                <div class="efv-player-controls">
+                    <button class="efv-ctrl-btn" id="legacy-rwd"><i class="fas fa-undo"></i></button>
+                    <button class="efv-play-btn" id="legacy-play"><i class="fas fa-play" id="legacy-play-icon"></i></button>
+                    <button class="efv-ctrl-btn" id="legacy-fwd"><i class="fas fa-redo"></i></button>
+                </div>
+                <div class="efv-speed-control">
+                    <span class="efv-speed-label">Speed</span>
+                    <div class="efv-speed-options">
+                        <button class="efv-speed-btn legacy-speed active" data-speed="1">1x</button>
+                        <button class="efv-speed-btn legacy-speed" data-speed="1.5">1.5x</button>
+                        <button class="efv-speed-btn legacy-speed" data-speed="2">2x</button>
+                    </div>
+                </div>
+            </div>
+            <div id="${resumeModalId}" class="resume-modal-overlay" style="z-index:10003;">
+                <div class="resume-modal">
+                    <i class="fas fa-headphones"></i>
+                    <h3>Continue Listening?</h3>
+                    <p>You previously listened up to <span id="legacy-resume-time" style="color:white; font-weight:bold;">0:00</span>.<br>Continue from where you left off?</p>
+                    <div class="resume-actions">
+                        <button id="legacy-btn-resume" class="btn-resume-primary"><i class="fas fa-play"></i> Continue from <span id="legacy-resume-btn-time">0:00</span></button>
+                        <button id="legacy-btn-restart" class="btn-resume-secondary"><i class="fas fa-redo"></i> Start from Beginning</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', audioHtml);
+    document.body.classList.add('modal-open');
 
-    window.closeAudioPlayer = function () {
-        saveProgress();
-        if (saveInterval) clearInterval(saveInterval);
-        document.getElementById(playerModalId).remove();
+    const audio = new Audio(`${CONTENT_CONFIG.contentApi}/audio/${bookId}?token=${token || ''}&t=${Date.now()}`);
+    const playIcon = document.getElementById('legacy-play-icon');
+    const seek = document.getElementById('legacy-seek');
+    let legacySaveInt = null;
+    let legacySeeking = false;
+
+    const saveLegacyProgress = () => {
+        if (audio.currentTime < 1) return;
+        const pd = { currentTime: audio.currentTime, totalDuration: audio.duration || 0, progress: (audio.currentTime / (audio.duration || 1)) * 100 };
+        if (pd.progress > 95) { syncProgress(bookId, 'AUDIOBOOK', { currentTime: 0, progress: 0 }); localStorage.removeItem(`audiobook_${bookId}_progress`); return; }
+        localStorage.setItem(`audiobook_${bookId}_progress`, JSON.stringify(pd));
+        if (token) syncProgress(bookId, 'AUDIOBOOK', pd);
+    };
+
+    audio.addEventListener('loadedmetadata', () => {
+        document.getElementById('legacy-time-total').textContent = formatTime(audio.duration);
+        if (savedState && savedState.currentTime > 1 && (savedState.currentTime / audio.duration) < 0.95) {
+            document.getElementById('legacy-resume-time').textContent = formatTime(savedState.currentTime);
+            document.getElementById('legacy-resume-btn-time').textContent = formatTime(savedState.currentTime);
+            document.getElementById(resumeModalId).classList.add('active');
+        } else { audio.play().catch(() => { }); }
+    });
+    audio.addEventListener('timeupdate', () => { if (!legacySeeking) { document.getElementById('legacy-time-cur').textContent = formatTime(audio.currentTime); seek.value = (audio.currentTime / (audio.duration || 1)) * 100; } });
+    audio.addEventListener('play', () => { playIcon.className = 'fas fa-pause'; legacySaveInt = setInterval(saveLegacyProgress, 5000); });
+    audio.addEventListener('pause', () => { playIcon.className = 'fas fa-play'; if (legacySaveInt) clearInterval(legacySaveInt); saveLegacyProgress(); });
+
+    document.getElementById('legacy-play').addEventListener('click', () => { audio.paused ? audio.play().catch(() => { }) : audio.pause(); });
+    document.getElementById('legacy-rwd').addEventListener('click', () => { audio.currentTime = Math.max(0, audio.currentTime - 10); });
+    document.getElementById('legacy-fwd').addEventListener('click', () => { audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 10); });
+    seek.addEventListener('input', () => { legacySeeking = true; document.getElementById('legacy-time-cur').textContent = formatTime((seek.value / 100) * (audio.duration || 0)); });
+    seek.addEventListener('change', () => { audio.currentTime = (seek.value / 100) * (audio.duration || 0); legacySeeking = false; });
+    document.querySelectorAll('.legacy-speed').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('.legacy-speed').forEach(x => x.classList.remove('active')); b.classList.add('active'); audio.playbackRate = parseFloat(b.dataset.speed); }));
+
+    document.getElementById('legacy-btn-resume')?.addEventListener('click', () => { audio.currentTime = savedState.currentTime; document.getElementById(resumeModalId).classList.remove('active'); audio.play(); });
+    document.getElementById('legacy-btn-restart')?.addEventListener('click', () => { audio.currentTime = 0; document.getElementById(resumeModalId).classList.remove('active'); localStorage.removeItem(`audiobook_${bookId}_progress`); audio.play(); });
+
+    window.closeLegacyPlayer = function () {
+        saveLegacyProgress();
+        if (legacySaveInt) clearInterval(legacySaveInt);
+        audio.pause(); audio.src = '';
+        document.getElementById(playerModalId)?.remove();
         document.body.classList.remove('modal-open');
-        if (window.efvSecurity) window.efvSecurity.disable(); // Stop protection when closing
-        // Refresh library tab to show new progress
         renderLibraryTab();
     };
 
-    // Global save on close
-    window.addEventListener('beforeunload', saveProgress);
-    window.addEventListener('pagehide', saveProgress);
+    window.addEventListener('beforeunload', saveLegacyProgress);
 };
 
 // --- API HELPERS ---
@@ -3185,18 +3837,15 @@ window.renderCartTab = function () {
                 <div style="position:absolute; top:0; left:0; right:0; height:1px; background: linear-gradient(90deg, transparent, rgba(255,211,105,0.3), transparent);"></div>
 
                 <div style="position: relative; flex-shrink: 0;">
-                    <img src="${item.thumbnail || 'img/vol1-cover.png'}" 
+                    <img src="${item.thumbnail || 'img/vol1-cover.png'}" class="cart-cover-img"
                         style="width: 75px; height: 105px; object-fit: cover; border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.5); border: 1px solid rgba(255,211,105,0.2);"
                         onerror="this.src='img/vol1-cover.png'">
-                    <div style="position:absolute; bottom:-5px; right:-5px; background: var(--gold-text); color: #000; font-size: 0.6rem; font-weight: 800; padding: 2px 6px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
-                        ${item.type || 'BOOK'}
-                    </div>
                 </div>
 
                 <!-- Info -->
                 <div style="flex: 1; min-width: 0;">
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                        <h4 style="margin: 0; font-size: 1rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        <h4 class="cart-item-title" style="margin: 0; font-size: 1rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             ${item.name || item.title}
                         </h4>
                     </div>
@@ -3208,12 +3857,14 @@ window.renderCartTab = function () {
                     <!-- Qty + Price Row -->
                     <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
                         <!-- Qty Selector -->
-                        <div style="
-                            display: flex; align-items: center; gap: 0;
+                        <div class="cart-qty-ctrl" style="
+                            display: flex !important; align-items: center !important; gap: 0 !important;
+                            flex-direction: row !important; flex-wrap: nowrap !important;
                             background: rgba(255,255,255,0.05);
                             border: 1px solid rgba(255,255,255,0.1);
                             border-radius: 8px;
                             overflow: hidden;
+                            min-width: 100px;
                         ">
                             <button onclick="updateCartQty('${item.id}', -1)" style="
                                 background: transparent; border: none; color: rgba(255,255,255,0.7);

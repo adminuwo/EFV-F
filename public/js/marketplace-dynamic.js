@@ -328,9 +328,19 @@ document.addEventListener('DOMContentLoaded', () => {
             : 'img/vol1-cover.png';
 
         const isDigital = rawType === 'audiobook' || rawType === 'ebook';
-        const isVol2 = product.volume === '2' || (product._id || product.id || '').toLowerCase().includes('v2');
-        // Only audiobooks and Vol 2 are "Coming Soon". E-Books are now available.
-        const isComingSoon = rawType === 'audiobook' || isVol2;
+        const isVol2 = product.volume === '2' || product.volume === 2 || (product._id || product.id || '').toLowerCase().includes('v2');
+        const isEnglish = (product.language || '').toLowerCase().includes('english') || (product._id || '').toLowerCase().includes('_en');
+
+        // Only Vol 2 products are "Coming Soon" by default. 
+        let isComingSoon = isVol2;
+
+        // Specific rule for Audiobooks: English stays "Coming Soon", Hindi goes LIVE.
+        if (rawType === 'audiobook') {
+            isComingSoon = isEnglish || isVol2;
+        } else if (rawType === 'ebook' && !isVol2) {
+            // E-Books for Vol 1 are all LIVE
+            isComingSoon = false;
+        }
         const buttonText = isComingSoon ? 'Coming Soon' : 'Add to Cart';
 
         const langBadge = product.language

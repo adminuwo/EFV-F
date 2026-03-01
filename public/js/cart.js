@@ -414,9 +414,16 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.product-card').forEach(card => {
             const id = (card.getAttribute('data-id') || '').toLowerCase();
             const btn = card.querySelector('.add-to-cart');
+            const isEnglish = id.includes('english') || id.includes('_en');
+            const isAudio = id.includes('audio');
 
-            // Only audiobooks and Vol 2 are "Coming Soon". E-Books are available.
-            if (btn && (id.includes('audio') || id.includes('v2'))) {
+            // Volume 1 is LIVE. Only Vol 2 is "Coming Soon".
+            // Rule: English Audio remains "Coming Soon". Hindi Audio for Vol 1 is LIVE.
+            let comingSoon = id.includes('v2') && !id.includes('v1');
+            if (isAudio && (isEnglish || id.includes('v2'))) {
+                comingSoon = true;
+            }
+            if (btn && comingSoon) {
                 btn.textContent = 'Coming Soon';
                 btn.style.background = 'rgba(255, 211, 105, 0.1)';
                 btn.style.color = 'rgba(255, 211, 105, 0.5)';
@@ -424,6 +431,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.style.opacity = '0.7';
                 btn.style.cursor = 'not-allowed';
                 btn.disabled = true;
+            } else if (btn) {
+                // Restore standard button if not in coming soon
+                btn.textContent = 'Add to Cart';
+                btn.style.background = ''; // Use CSS default
+                btn.style.color = '';
+                btn.style.border = '';
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+                btn.disabled = false;
             }
         });
     }
@@ -559,8 +575,9 @@ document.addEventListener('DOMContentLoaded', () => {
             buyBtn.setAttribute('data-target-id', productId);
 
             const targetId = (productId || '').toLowerCase();
-            // Only audiobooks and Vol 2 are "Coming Soon". E-Books are now available.
-            if (targetId.includes('audio') || targetId.includes('v2')) {
+            // Volume 1 is LIVE. Only Vol 2 is "Coming Soon".
+            let comingSoon = targetId.includes('v2') && !targetId.includes('v1');
+            if (comingSoon) {
                 addBtn.innerHTML = '<i class="fas fa-clock"></i> COMING SOON';
                 addBtn.disabled = true;
                 addBtn.style.opacity = '0.5';

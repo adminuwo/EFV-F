@@ -739,15 +739,49 @@
     }
 }
 
-.checkout-steps-col h3 {
-    font-size: 1.1rem !important;
-    margin-bottom: 15px !important;
+@media (max-width: 900px) {
+    .checkout-steps-col h3 {
+        font-size: 0.95rem !important;
+        margin-bottom: 10px !important;
+    }
+
+    .pricing-card {
+        padding: 10px !important;
+    }
+
+    .pricing-card h4 {
+        font-size: 0.9rem !important;
+        margin-bottom: 5px !important;
+        padding-bottom: 5px !important;
+    }
+
+    .price-rows {
+        font-size: 0.85rem !important;
+        gap: 8px !important;
+    }
+
+    .price-rows>div:last-child {
+        font-size: 1.05rem !important;
+        margin-top: 10px !important;
+        padding-top: 10px !important;
+    }
+
+    .checkout-step-card {
+        padding: 15px !important;
+    }
 }
 
-.pricing-card h4 {
-    font-size: 1rem !important;
-    margin-bottom: 10px !important;
-    padding-bottom: 8px !important;
+@media (min-width: 901px) {
+    .checkout-steps-col h3 {
+        font-size: 1.1rem !important;
+        margin-bottom: 15px !important;
+    }
+
+    .pricing-card h4 {
+        font-size: 1rem !important;
+        margin-bottom: 10px !important;
+        padding-bottom: 8px !important;
+    }
 }
 
 /* Notification Deletion Styles */

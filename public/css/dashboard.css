@@ -807,10 +807,14 @@ body.dashboard-body {
         top: 0;
         display: block;
         /* Standard block container */
-        padding: 0 15px;
+        padding: 0 15px !important;
+        margin: 0 !important;
         z-index: 1000;
-        background: rgba(10, 10, 10, 0.98);
-        border-bottom: 1px solid rgba(255, 211, 105, 0.15);
+        background: rgba(10, 10, 10, 0.98) !important;
+        border: none !important;
+        border-bottom: 1px solid rgba(255, 211, 105, 0.15) !important;
+        border-radius: 0 !important;
+        transform: none !important;
         overflow: visible;
         /* CRITICAL: backdrop-filter creates a new containing block for position:fixed
            children in Chrome/Safari, trapping the sidebar-nav inside the 60px header.
@@ -867,18 +871,18 @@ body.dashboard-body {
 
     .sidebar-nav {
         position: fixed;
-        top: 60px;
-        /* Adjust according to header height */
+        top: 68px;
         left: -100%;
+        bottom: 0;
         width: 100% !important;
         max-width: 100% !important;
-        height: calc(100vh - 60px);
+        height: auto !important;
         background: rgba(10, 10, 10, 0.98);
         backdrop-filter: blur(20px);
         display: flex !important;
         flex-direction: column;
         gap: 10px;
-        padding: 40px 20px;
+        padding: 20px 20px 30px;
         transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         z-index: 999;
         overflow-y: auto;
@@ -937,7 +941,6 @@ body.dashboard-body {
     }
 
     .main-content * {
-        background-color: transparent !important;
         color: white;
     }
 
@@ -969,6 +972,7 @@ body.dashboard-body {
         align-items: flex-start;
         gap: 10px;
         margin-bottom: 25px;
+        padding-top: 25px;
     }
 
     .content-header h1 {
@@ -1217,16 +1221,17 @@ body.dashboard-body {
 /* Address Cards */
 .address-card {
     position: relative;
-    padding: 15px;
+    padding: 20px;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    transition: all 0.2s;
+    margin-bottom: 25px !important;
+    background: transparent !important;
+    border: 1px solid #111 !important;
+    transition: all 0.3s ease;
 }
 
 .address-card.default {
-    border-color: var(--gold-text);
-    background: rgba(255, 211, 105, 0.03);
+    border-color: var(--gold-text) !important;
+    background: rgba(255, 211, 105, 0.05) !important;
 }
 
 .address-card h5 {
@@ -1635,5 +1640,26 @@ body.dashboard-body {
     .main-content .gold-text,
     .main-content h1 .gold-text {
         color: #FFD700 !important;
+    }
+
+    .cart-cover-img {
+        width: 125px !important;
+        height: 175px !important;
+        margin-bottom: 5px;
+    }
+
+    .cart-item-title {
+        font-size: 0.85rem !important;
+        white-space: normal !important;
+        text-align: center;
+        line-height: 1.3 !important;
+    }
+
+    .cart-qty-ctrl {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: center !important;
+        margin: 10px auto !important;
+        width: fit-content !important;
     }
 }

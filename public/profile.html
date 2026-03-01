@@ -1,10 +1,10 @@
-ï»¿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Profile | EFVâ„¢</title>
+    <title>My Profile | EFV™</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/responsive.css">
@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="css/dashboard-v2.css">
     <link rel="stylesheet" href="css/admin-modal.css">
     <link rel="stylesheet" href="css/reader.css">
+    <link rel="stylesheet" href="css/audiobook.css">
     <link rel="stylesheet" href="css/security.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- PDF.js for Library Access -->
@@ -147,7 +148,7 @@
                         <div class="icon-box green"><i class="fas fa-coins"></i></div>
                         <div class="stat-info">
                             <h3>Total Spent</h3>
-                            <span id="stat-total-spent" class="stat-value">â‚¹0</span>
+                            <span id="stat-total-spent" class="stat-value">?0</span>
                         </div>
                     </div>
                 </div>
@@ -184,11 +185,11 @@
                         <div class="glass-panel checkout-summary-panel">
                             <h3>Order Summary</h3>
                             <div class="summary-details">
-                                <div class="summary-row"><span>Subtotal</span><span id="cart-subtotal">â‚¹0.00</span>
+                                <div class="summary-row"><span>Subtotal</span><span id="cart-subtotal">?0.00</span>
                                 </div>
-                                <div class="summary-row"><span>Tax (GST)</span><span id="cart-tax">â‚¹0.00</span></div>
+                                <div class="summary-row"><span>Tax (GST)</span><span id="cart-tax">?0.00</span></div>
                                 <div class="summary-row total"><span>Grand Total</span><span
-                                        id="cart-grand-total">â‚¹0.00</span></div>
+                                        id="cart-grand-total">?0.00</span></div>
                             </div>
                             <button class="btn btn-gold full-width" id="proceed-to-checkout-btn">Proceed to
                                 Checkout</button>
@@ -237,7 +238,27 @@
                     <button class="btn btn-outline small" onclick="syncLibraryWithBackend()"><i
                             class="fas fa-sync-alt"></i> Sync</button>
                 </header>
+
+                <!-- Library Sub-Tabs -->
+                <div class="library-sub-tabs">
+                    <button class="library-sub-tab active" data-library-tab="all" onclick="filterLibraryView('all')">
+                        <i class="fas fa-layer-group"></i> All
+                    </button>
+                    <button class="library-sub-tab" data-library-tab="ebooks" onclick="filterLibraryView('ebooks')">
+                        <i class="fas fa-book"></i> E-Books
+                    </button>
+                    <button class="library-sub-tab" data-library-tab="audiobooks"
+                        onclick="filterLibraryView('audiobooks')">
+                        <i class="fas fa-headphones"></i> Audiobooks
+                    </button>
+                </div>
+
+                <!-- E-Books / All grid -->
                 <div id="dashboard-library-list" class="items-grid"></div>
+
+                <!-- Audiobooks grid -->
+                <div id="dashboard-audiobooks-list" class="items-grid" style="display:none;"></div>
+
                 <div id="library-empty-state" class="empty-state hidden">
                     <i class="fas fa-book-open"></i>
                     <h3>Library is empty</h3>
@@ -294,7 +315,7 @@
                                         style="display: block; margin-bottom: 8px; font-size: 0.9rem; opacity: 0.8;">Current
                                         Password</label>
                                     <input type="password" id="current-password" class="glass-input" required
-                                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢">
+                                        placeholder="••••••••">
                                 </div>
                                 <div class="form-group">
                                     <label
@@ -308,7 +329,7 @@
                                         style="display: block; margin-bottom: 8px; font-size: 0.9rem; opacity: 0.8;">Confirm
                                         New Password</label>
                                     <input type="password" id="confirm-password" class="glass-input" required
-                                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢">
+                                        placeholder="••••••••">
                                 </div>
 
                                 <div style="margin-top: 10px; display: flex; gap: 15px; align-items: center;">
@@ -448,7 +469,7 @@
                         <div style="display:flex; flex-direction:column; gap:8px; font-size:0.8rem;">
                             <div style="display:flex; justify-content:space-between; opacity:0.6;">
                                 <span>Subtotal</span>
-                                <span id="modal-subtotal">â‚¹0</span>
+                                <span id="modal-subtotal">?0</span>
                             </div>
                             <div style="display:flex; justify-content:space-between; opacity:0.6;">
                                 <span>Shipping</span>
@@ -458,7 +479,7 @@
                             <div
                                 style="display:flex; justify-content:space-between; font-weight:800; color:var(--gold-text);">
                                 <span>Total</span>
-                                <span id="modal-total">â‚¹0</span>
+                                <span id="modal-total">?0</span>
                             </div>
                             <div style="height:1px; background:rgba(255,255,255,0.05); margin:4px 0;"></div>
                             <div style="font-size:0.72rem; opacity:0.5;">
@@ -542,7 +563,7 @@
         </div>
 
         <div class="reader-canvas-container"
-            style="display: flex; justify-content: center; align-items: flex-start; padding-top: 60px; padding-bottom: 40px; overflow-y: auto;">
+            style="display: flex; justify-content: center; align-items: flex-start; padding-top: 95px; padding-bottom: 40px; overflow-y: auto;">
             <div class="checkout-container step-1" id="checkout-container-v2"
                 style="width: 95%; display: grid; gap: 20px; transition: all 0.5s ease;">
 
@@ -596,7 +617,7 @@
                         <div class="price-rows" style="display: flex; flex-direction: column; gap: 12px;">
                             <div style="display: flex; justify-content: space-between; opacity: 0.7;">
                                 <span>Cart Subtotal</span>
-                                <span id="chk-subtotal">â‚¹0.00</span>
+                                <span id="chk-subtotal">?0.00</span>
                             </div>
                             <div style="display: flex; justify-content: space-between; opacity: 0.7;">
                                 <span>Delivery Charges</span>
@@ -604,12 +625,12 @@
                             </div>
                             <div style="display: flex; justify-content: space-between; opacity: 0.7;">
                                 <span>Tax (GST 18%)</span>
-                                <span id="chk-tax">â‚¹0.00</span>
+                                <span id="chk-tax">?0.00</span>
                             </div>
                             <div
                                 style="display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); font-weight: 800; font-size: 1.2rem; color: var(--gold-text);">
                                 <span>Total Payable</span>
-                                <span id="chk-total">â‚¹0.00</span>
+                                <span id="chk-total">?0.00</span>
                             </div>
                         </div>
                         <p style="margin-top: 25px; font-size: 0.75rem; opacity: 0.4; text-align: center;">
