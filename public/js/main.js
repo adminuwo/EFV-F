@@ -3,6 +3,14 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Global Coupon Capture
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlCoupon = urlParams.get('coupon');
+    if (urlCoupon) {
+        localStorage.setItem('efv_applied_coupon', urlCoupon.toUpperCase());
+        console.log(`🎟️ Coupon ${urlCoupon} captured from URL`);
+    }
+
     const nav = document.querySelector('nav');
 
     // Optimized Scroll Reveal using IntersectionObserver

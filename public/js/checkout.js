@@ -1,5 +1,8 @@
 const API_BASE = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE_URL) ? CONFIG.API_BASE_URL : 'http://localhost:8080';
 
+let appliedCoupon = null;
+let checkoutSubtotal = 0;
+
 document.addEventListener('DOMContentLoaded', () => {
     const user = JSON.parse(localStorage.getItem('efv_user'));
     if (!user) {
@@ -11,9 +14,19 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('ship-email').value = user.email || '';
     document.getElementById('ship-name').value = user.name || '';
 
+    // User-specific cart key (matches cart.js getUserKey logic)
+    function getUserCartKey() {
+        if (!user || !user.email) return 'efv_cart';
+        const cleanEmail = user.email.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        return `efv_cart_${cleanEmail}`;
+    }
+
     let checkoutItems = [];
     const directCheckout = JSON.parse(localStorage.getItem('directCheckout'));
-    const cart = JSON.parse(localStorage.getItem('efv_cart')) || [];
+    // Read from user-specific cart key, fall back to generic cart
+    const cart = JSON.parse(localStorage.getItem(getUserCartKey()))
+        || JSON.parse(localStorage.getItem('efv_cart'))
+        || [];
 
     if (directCheckout) {
         checkoutItems = Array.isArray(directCheckout) ? directCheckout : [directCheckout];
@@ -27,10 +40,156 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    // Calculate initial subtotal for coupon validation
+    checkoutSubtotal = checkoutItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
     renderSummary(checkoutItems);
     setupPlaceOrder(checkoutItems, user);
     setupPincodeCheck(checkoutItems);
+    setupCouponHandlers();
+
+    // AUTO-APPLY COUPON FROM URL OR LOCALSTORAGE
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlCoupon = urlParams.get('coupon');
+    const savedCoupon = localStorage.getItem('efv_applied_coupon');
+    const finalCoupon = urlCoupon || savedCoupon;
+
+    if (finalCoupon) {
+        document.getElementById('coupon-input').value = finalCoupon;
+        applyCoupon(finalCoupon, checkoutSubtotal);
+        if (!urlCoupon) localStorage.removeItem('efv_applied_coupon');
+    }
+
+    setupPaymentModeHandlers();
 });
+
+// --- NEW SHIPPING & COD LOGIC ---
+const EKART_RATES = {
+    'A': 34.22,
+    'B': 42.48, // Within State (Madhya Pradesh)
+    'C': 49.56, // Metro
+    'D': 59.00, // Rest of India (Default)
+    'E': 67.26  // NE & J&K
+};
+
+const COD_CHARGES = {
+    BASE: 36.58,
+    PERCENTAGE: 0.0224 // 2.24%
+};
+
+function getZoneFromPincode(pincode) {
+    if (!pincode || pincode.length !== 6) return null;
+
+    const prefix3 = pincode.substring(0, 3);
+    const prefix2 = pincode.substring(0, 2);
+
+    // 1. Same City Check (Jabalpur - Origin)
+    if (prefix3 === '482') return 'A';
+
+    // 2. Metro check (Mumbai, Delhi, Chennai, Kolkata, Bangalore, Hyderabad)
+    const metros = ['11', '40', '60', '70', '56', '50'];
+    if (metros.includes(prefix2)) return 'C';
+
+    // 3. Local state check (Madhya Pradesh prefixes: 45-48)
+    const localPrefixes = ['45', '46', '47', '48'];
+    if (localPrefixes.includes(prefix2)) return 'B';
+
+    // 4. NE & J&K check
+    const remotePrefixes = ['79', '18', '19'];
+    if (remotePrefixes.includes(prefix2)) return 'E';
+
+    // 5. Rest of India
+    return 'D';
+}
+
+function calculateShipping() {
+    const pin = document.getElementById('ship-pincode').value;
+    const zone = getZoneFromPincode(pin);
+    if (!zone) return 0;
+    return EKART_RATES[zone] || 0;
+}
+
+function calculateCOD(subtotal) {
+    const isCOD = document.querySelector('input[name="payment-mode"]:checked').value === 'COD';
+    if (!isCOD) return 0;
+    return COD_CHARGES.BASE + (subtotal * COD_CHARGES.PERCENTAGE);
+}
+
+function setupPaymentModeHandlers() {
+    const radios = document.querySelectorAll('input[name="payment-mode"]');
+    const placeBtn = document.getElementById('place-order-btn');
+
+    radios.forEach(radio => {
+        radio.addEventListener('change', () => {
+            // Update UI classes for styles
+            document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('active'));
+            radio.closest('.payment-option').classList.add('active');
+
+            // Toggle COD row visibility
+            const codRow = document.getElementById('cod-charge-row');
+            if (radio.value === 'COD') {
+                codRow.style.display = 'flex';
+                placeBtn.innerHTML = 'PLACE ORDER <i class="fas fa-arrow-right"></i>';
+            } else {
+                codRow.style.display = 'none';
+                placeBtn.innerHTML = 'PAY NOW <i class="fas fa-arrow-right"></i>';
+            }
+
+            renderSummary(null, true);
+        });
+    });
+}
+
+function setupCouponHandlers() {
+    const applyBtn = document.getElementById('apply-coupon-btn');
+    const input = document.getElementById('coupon-input');
+
+    applyBtn.addEventListener('click', () => {
+        const code = input.value.trim();
+        if (!code) return;
+        applyCoupon(code, checkoutSubtotal);
+    });
+}
+
+async function applyCoupon(code, amount) {
+    const status = document.getElementById('coupon-status');
+    const applyBtn = document.getElementById('apply-coupon-btn');
+
+    status.style.display = 'block';
+    status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+    status.style.color = 'white';
+    applyBtn.disabled = true;
+
+    try {
+        const res = await fetch(`${API_BASE}/api/coupons/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, amount })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            appliedCoupon = data;
+            // Save coupon code so payment-status.html can pass it to backend after Cashfree redirect
+            localStorage.setItem('efv_applied_coupon', data.code);
+            status.innerHTML = `<i class="fas fa-check-circle"></i> Coupon <strong>${data.code}</strong> applied!`;
+            status.style.color = '#2ed573';
+            renderSummary(null, true); // Refresh summary with discount
+        } else {
+            appliedCoupon = null;
+            localStorage.removeItem('efv_applied_coupon');
+            status.innerHTML = `<i class="fas fa-times-circle"></i> ${data.message || 'Invalid coupon'}`;
+            status.style.color = '#ff4757';
+            renderSummary(null, true);
+        }
+    } catch (error) {
+        status.innerHTML = 'Verification failed. Try again.';
+        status.style.color = '#ff4757';
+    } finally {
+        applyBtn.disabled = false;
+    }
+}
 
 let isServiceable = true; // Default to true for now, will be updated by check
 
@@ -87,6 +246,9 @@ function setupPincodeCheck(items) {
                 isServiceable = true;
                 placeOrderBtn.disabled = false;
             }
+
+            // RE-CALCULATE SHIPPING WHEN PINCODE IS VALIDATED
+            renderSummary(null, true);
         } else {
             statusDiv.className = 'serviceability-info'; // Reverts to display:none via CSS
         }
@@ -98,14 +260,15 @@ function setupPincodeCheck(items) {
     }
 }
 
-function renderSummary(items) {
+let currentCheckoutItems = [];
+
+function renderSummary(items, isRefresh = false) {
+    if (items) currentCheckoutItems = items;
     const list = document.getElementById('checkout-items-list');
     let subtotal = 0;
 
-    list.innerHTML = items.map(item => {
+    list.innerHTML = currentCheckoutItems.map(item => {
         subtotal += item.price * item.quantity;
-        // In modal we set pm-img src, but in items we might not have 'image'. 
-        // We'll try to find a thumbnail or use a placeholder.
         const imgPath = item.thumbnail || 'img/vol1-cover.png';
 
         return `
@@ -121,8 +284,45 @@ function renderSummary(items) {
         `;
     }).join('');
 
+    const shippingCharge = calculateShipping();
+    const codCharge = calculateCOD(subtotal);
+
     document.getElementById('summary-subtotal').textContent = `₹${subtotal.toFixed(2)}`;
-    document.getElementById('summary-total').textContent = `₹${subtotal.toFixed(2)}`;
+    document.getElementById('summary-shipping').textContent = `₹${shippingCharge.toFixed(2)}`;
+    document.getElementById('summary-cod').textContent = `₹${codCharge.toFixed(2)}`;
+
+    // Handle Discount
+    let discount = 0;
+    if (appliedCoupon) {
+        if (appliedCoupon.type === 'Percentage') {
+            discount = (subtotal * appliedCoupon.value) / 100;
+        } else {
+            discount = appliedCoupon.value;
+        }
+    }
+
+    const total = Math.max(0, subtotal - discount + shippingCharge + codCharge);
+
+    // Add/Update discount row if applicable
+    let summaryBox = document.querySelector('.checkout-summary');
+    let existingDiscountRow = document.getElementById('summary-discount-row');
+
+    if (discount > 0) {
+        if (!existingDiscountRow) {
+            const row = document.createElement('div');
+            row.className = 'checkout-total-row';
+            row.id = 'summary-discount-row';
+            row.style.color = '#2ed573';
+            row.innerHTML = `<span>Discount (${appliedCoupon.code})</span> <span id="summary-discount">-₹${discount.toFixed(2)}</span>`;
+            summaryBox.insertBefore(row, document.getElementById('cod-charge-row'));
+        } else {
+            existingDiscountRow.innerHTML = `<span>Discount (${appliedCoupon.code})</span> <span id="summary-discount">-₹${discount.toFixed(2)}</span>`;
+        }
+    } else if (existingDiscountRow) {
+        existingDiscountRow.remove();
+    }
+
+    document.getElementById('summary-total').textContent = `₹${total.toFixed(2)}`;
 }
 
 function showToast(msg) {
@@ -175,18 +375,35 @@ function setupPlaceOrder(items, user) {
 
         localStorage.setItem('shippingAddress', JSON.stringify(address));
 
-        // 2. Create Order Object
-        const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        // Calculate Totals using dynamic logic
+        const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const shipping = calculateShipping();
+        const cod = calculateCOD(subtotal);
+        let discount = 0;
+        if (appliedCoupon) {
+            if (appliedCoupon.type === 'Percentage') {
+                discount = (subtotal * appliedCoupon.value) / 100;
+            } else {
+                discount = appliedCoupon.value;
+            }
+        }
+
+        const isCOD = document.querySelector('input[name="payment-mode"]:checked').value === 'COD';
+        const finalAmount = Math.max(0, subtotal - discount + shipping + cod);
         const orderId = 'EFV-' + Date.now() + Math.floor(Math.random() * 1000);
 
         const orderData = {
             orderId: orderId,
             userEmail: user.email,
             products: items,
-            totalAmount: totalAmount,
+            totalAmount: Math.round(finalAmount),
+            discountAmount: Math.round(discount),
+            shippingCharge: shipping,
+            codCharge: cod,
+            paymentMethod: isCOD ? 'COD' : 'Online',
             shippingAddress: address,
-            paymentStatus: 'Pending',
-            orderStatus: 'Awaiting Payment',
+            paymentStatus: isCOD ? 'Pending' : 'Pending',
+            orderStatus: isCOD ? 'Processing' : 'Awaiting Payment',
             orderDate: new Date().toISOString()
         };
 
@@ -195,14 +412,169 @@ function setupPlaceOrder(items, user) {
         allOrders.push(orderData);
         localStorage.setItem('orders', JSON.stringify(allOrders));
 
-        showToast('Order created! Initializing payment...');
-
-        // 3. Open Cashfree
-        await initCashfree(orderData);
+        if (isCOD) {
+            showToast('COD Order Received! Redirecting...');
+            // CALL DIRECT COD ORDER API
+            await placeCODOrder(orderData, appliedCoupon ? appliedCoupon.code : null);
+        } else {
+            showToast('Initializing Online Payment...');
+            await initRazorpay(orderData, appliedCoupon ? appliedCoupon.code : null);
+        }
     });
 }
 
-async function initCashfree(order) {
+async function initRazorpay(order, couponCode = null) {
+    const btn = document.getElementById('place-order-btn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> INITIALIZING RAZORPAY...';
+
+    try {
+        // 1. Get Razorpay Config (Key)
+        const configRes = await fetch(`${API_BASE}/api/orders/config`);
+        const { razorpayKeyId } = await configRes.json();
+
+        // 2. Create Order on Backend
+        const response = await fetch(`${API_BASE}/api/orders/razorpay`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            },
+            body: JSON.stringify({
+                amount: Math.round(order.totalAmount * 100), // Convert to paisa
+                currency: 'INR'
+            })
+        });
+
+        const rzpData = await response.json();
+        if (!response.ok) throw new Error(rzpData.message || 'Razorpay order creation failed');
+
+        // 3. Open Razorpay Checkout
+        const options = {
+            key: razorpayKeyId,
+            amount: rzpData.amount,
+            currency: rzpData.currency || 'INR',
+            name: "EFV™ Marketplace",
+            description: "Book Purchase",
+            image: "img/AISA.svg",
+            order_id: rzpData.id,
+            handler: async function (response) {
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> VERIFYING PAYMENT...';
+                // 4. Verify Payment
+                await verifyRazorpayPayment(response, order, couponCode);
+            },
+            prefill: {
+                name: order.shippingAddress.name,
+                email: order.shippingAddress.email,
+                contact: order.shippingAddress.phone
+            },
+            notes: {
+                order_id: order.orderId
+            },
+            theme: {
+                color: "#FFD369"
+            },
+            modal: {
+                ondismiss: function () {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            }
+        };
+
+        const rzp = new Razorpay(options);
+        rzp.open();
+
+    } catch (e) {
+        alert('Payment Error: ' + e.message);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+async function verifyRazorpayPayment(rzpResponse, localOrder, couponCode) {
+    try {
+        const res = await fetch(`${API_BASE}/api/orders/verify`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            },
+            body: JSON.stringify({
+                razorpay_order_id: rzpResponse.razorpay_order_id,
+                razorpay_payment_id: rzpResponse.razorpay_payment_id,
+                razorpay_signature: rzpResponse.razorpay_signature,
+                checkoutData: {
+                    items: localOrder.products,
+                    address: localOrder.shippingAddress
+                },
+                couponCode: couponCode
+            })
+        });
+
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.message || 'Verification Failed');
+
+        if (!localStorage.getItem('directCheckout')) {
+            localStorage.removeItem('efv_cart');
+        }
+        localStorage.removeItem('directCheckout');
+
+        showToast('✅ Payment Successful!');
+        setTimeout(() => {
+            window.location.href = 'profile.html?tab=orders';
+        }, 1500);
+
+    } catch (e) {
+        alert('Verification Error: ' + e.message);
+        location.reload();
+    }
+}
+
+async function placeCODOrder(orderData, couponCode) {
+    const btn = document.getElementById('place-order-btn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PLACING COD ORDER...';
+
+    try {
+        const response = await fetch(`${API_BASE}/api/orders/cod`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            },
+            body: JSON.stringify({
+                orderId: orderData.orderId,
+                customer: orderData.shippingAddress,
+                items: orderData.products.map(i => ({ productId: i.id || i.productId, quantity: i.quantity })),
+                totalAmount: orderData.totalAmount,
+                couponCode: couponCode
+            })
+        });
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || 'COD Placement Failed');
+
+        if (!localStorage.getItem('directCheckout')) {
+            localStorage.removeItem('efv_cart');
+        }
+        localStorage.removeItem('directCheckout');
+
+        showToast('✅ Order Placed Successfully!');
+        setTimeout(() => {
+            window.location.href = 'profile.html?tab=orders';
+        }, 1500);
+
+    } catch (e) {
+        alert('COD Order Error: ' + e.message);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+async function initCashfree(order, couponCode = null) {
     const btn = document.getElementById('place-order-btn');
     const originalText = btn.innerHTML;
     btn.disabled = true;
@@ -219,7 +591,8 @@ async function initCashfree(order) {
                 amount: order.totalAmount,
                 customerName: order.shippingAddress.name,
                 customerEmail: order.shippingAddress.email,
-                customerPhone: order.shippingAddress.phone
+                customerPhone: order.shippingAddress.phone,
+                couponCode: couponCode // Pass coupon to backend
             })
         });
 
@@ -280,7 +653,12 @@ async function verifyCashfreePayment(cfOrderId, localOrder) {
                 customer: {
                     name: localOrder.shippingAddress.name,
                     email: localOrder.shippingAddress.email,
-                    address: `${localOrder.shippingAddress.street}, ${localOrder.shippingAddress.area}, ${localOrder.shippingAddress.city}, ${localOrder.shippingAddress.pincode}`
+                    phone: localOrder.shippingAddress.phone,
+                    address: localOrder.shippingAddress.street + ', ' + localOrder.shippingAddress.area,
+                    city: localOrder.shippingAddress.city,
+                    state: localOrder.shippingAddress.state,
+                    pincode: localOrder.shippingAddress.pincode,
+                    country: localOrder.shippingAddress.country
                 },
                 items: localOrder.products.map(i => ({
                     productId: i.id || i.productId,

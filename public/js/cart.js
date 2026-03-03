@@ -318,37 +318,50 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p>Discover the transformative power of Energy, Frequency, and Vibration. Each volume in this sacred series is designed to align your consciousness with the universal code of existence.</p>
                     </div>
 
-                    <div class="pm-tabs">
-                        <div class="pm-tab-headers">
-                            <button class="pm-tab-btn active" data-tab="specs">Specifications</button>
-                            <button class="pm-tab-btn" data-tab="desc">Description</button>
-                            <button class="pm-tab-btn" data-tab="mfr">Manufacturer info</button>
+                    <div class="pm-accordion">
+                        <div class="pm-accordion-item">
+                            <button class="pm-accordion-header active" data-tab="specs">
+                                <span>SPECIFICATIONS</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="pm-accordion-content active" id="tab-specs">
+                                <table class="pm-specs-table" id="pm-specs-body">
+                                    <!-- Dynamic rows -->
+                                </table>
+                            </div>
                         </div>
-                        <div class="pm-tab-content active" id="tab-specs">
-                            <table class="pm-specs-table" id="pm-specs-body">
-                                <!-- Dynamic rows -->
-                            </table>
+                        <div class="pm-accordion-item">
+                            <button class="pm-accordion-header" data-tab="desc">
+                                <span>DESCRIPTION</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="pm-accordion-content" id="tab-desc">
+                                <p id="pm-desc-text"></p>
+                            </div>
                         </div>
-                        <div class="pm-tab-content" id="tab-desc">
-                            <p id="pm-desc-text"></p>
-                        </div>
-                        <div class="pm-tab-content" id="tab-mfr">
-                            <div class="pm-mfr-list">
-                                <div class="pm-mfr-item">
-                                    <span class="pm-mfr-label">Generic Name</span>
-                                    <span class="pm-mfr-value" id="pm-generic-name">Books</span>
-                                </div>
-                                <div class="pm-mfr-item">
-                                    <span class="pm-mfr-label">Country of Origin</span>
-                                    <span class="pm-mfr-value" id="pm-origin-text">India</span>
-                                </div>
-                                <div class="pm-mfr-item">
-                                    <span class="pm-mfr-label">Name and address of the Manufacturer</span>
-                                    <span class="pm-mfr-value" id="pm-mfr-full"></span>
-                                </div>
-                                <div class="pm-mfr-item">
-                                    <span class="pm-mfr-label">Name and address of the Packer</span>
-                                    <span class="pm-mfr-value" id="pm-packer-full"></span>
+                        <div class="pm-accordion-item">
+                            <button class="pm-accordion-header" data-tab="mfr">
+                                <span>MANUFACTURER INFO</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="pm-accordion-content" id="tab-mfr">
+                                <div class="pm-mfr-list">
+                                    <div class="pm-mfr-item">
+                                        <span class="pm-mfr-label">Generic Name</span>
+                                        <span class="pm-mfr-value" id="pm-generic-name">Books</span>
+                                    </div>
+                                    <div class="pm-mfr-item">
+                                        <span class="pm-mfr-label">Country of Origin</span>
+                                        <span class="pm-mfr-value" id="pm-origin-text">India</span>
+                                    </div>
+                                    <div class="pm-mfr-item">
+                                        <span class="pm-mfr-label">Name and address of the Manufacturer</span>
+                                        <span class="pm-mfr-value" id="pm-mfr-full"></span>
+                                    </div>
+                                    <div class="pm-mfr-item">
+                                        <span class="pm-mfr-label">Name and address of the Packer</span>
+                                        <span class="pm-mfr-value" id="pm-packer-full"></span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -612,11 +625,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Reset Tabs
-        document.querySelectorAll('.pm-tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.pm-tab-content').forEach(c => c.classList.remove('active'));
-        document.querySelector('.pm-tab-btn[data-tab="specs"]').classList.add('active');
-        document.getElementById('tab-specs').classList.add('active');
+        // Reset Accordion
+        document.querySelectorAll('.pm-accordion-header').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.pm-accordion-content').forEach(c => c.classList.remove('active'));
+        const defaultHeader = document.querySelector('.pm-accordion-header[data-tab="specs"]');
+        const defaultContent = document.getElementById('tab-specs');
+        if (defaultHeader) defaultHeader.classList.add('active');
+        if (defaultContent) defaultContent.classList.add('active');
 
         // Show Modal
         modal.classList.add('active');
@@ -647,15 +662,22 @@ document.addEventListener('DOMContentLoaded', () => {
         // Multi-Action Delegation (Tabs + Buttons)
         if (modal && !modal.hasAttribute('data-listeners-init')) {
             modal.addEventListener('click', (e) => {
-                // 1. Tab Switching
-                const tabBtn = e.target.closest('.pm-tab-btn');
-                if (tabBtn) {
-                    const tabId = tabBtn.getAttribute('data-tab');
-                    modal.querySelectorAll('.pm-tab-btn').forEach(b => b.classList.remove('active'));
-                    modal.querySelectorAll('.pm-tab-content').forEach(c => c.classList.remove('active'));
-                    tabBtn.classList.add('active');
-                    const content = modal.querySelector(`#tab-${tabId}`);
-                    if (content) content.classList.add('active');
+                // 1. Accordion Toggling
+                const accordionHeader = e.target.closest('.pm-accordion-header');
+                if (accordionHeader) {
+                    const tabId = accordionHeader.getAttribute('data-tab');
+                    const isActive = accordionHeader.classList.contains('active');
+
+                    // Autoclose others
+                    modal.querySelectorAll('.pm-accordion-header').forEach(b => b.classList.remove('active'));
+                    modal.querySelectorAll('.pm-accordion-content').forEach(c => c.classList.remove('active'));
+
+                    // Toggle current (if it wasn't active, open it)
+                    if (!isActive) {
+                        accordionHeader.classList.add('active');
+                        const content = modal.querySelector(`#tab-${tabId}`);
+                        if (content) content.classList.add('active');
+                    }
                     return;
                 }
 

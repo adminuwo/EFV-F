@@ -99,9 +99,20 @@
 
             try {
                 const token = localStorage.getItem('authToken');
+                const user = JSON.parse(localStorage.getItem('efv_user'));
                 const shippingAddress = JSON.parse(localStorage.getItem('shippingAddress'));
                 const directCheckout = JSON.parse(localStorage.getItem('directCheckout'));
-                const cart = JSON.parse(localStorage.getItem('efv_cart')) || [];
+                const appliedCoupon = localStorage.getItem('efv_applied_coupon') || '';
+
+                // Read user-specific cart key (matches cart.js logic)
+                function getUserCartKey() {
+                    if (!user || !user.email) return 'efv_cart';
+                    const cleanEmail = user.email.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                    return `efv_cart_${cleanEmail}`;
+                }
+                const cart = JSON.parse(localStorage.getItem(getUserCartKey()))
+                    || JSON.parse(localStorage.getItem('efv_cart'))
+                    || [];
 
                 const items = directCheckout ? (Array.isArray(directCheckout) ? directCheckout : [directCheckout]) : cart;
 
@@ -114,17 +125,20 @@
                     body: JSON.stringify({
                         order_id: order_id,
                         customer: shippingAddress,
-                        items: items.map(i => ({ productId: i.id || i.productId, quantity: i.quantity }))
+                        items: items.map(i => ({ productId: i.id || i.productId, quantity: i.quantity })),
+                        couponCode: appliedCoupon
                     })
                 });
 
                 const data = await response.json();
 
                 if (response.ok) {
-                    // Success
+                    // Success — clear all cart-related storage
+                    localStorage.removeItem(getUserCartKey());
                     localStorage.removeItem('efv_cart');
                     localStorage.removeItem('directCheckout');
                     localStorage.removeItem('shippingAddress');
+                    localStorage.removeItem('efv_applied_coupon');
 
                     statusBox.innerHTML = `
                         <div class="loader success-icon"><i class="fas fa-check-circle"></i></div>

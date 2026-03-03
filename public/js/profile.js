@@ -1030,14 +1030,14 @@ async function renderOrdersTab(filter = 'all') {
                         </div>
                     </div>
 
-                    <div style="display: flex; gap: 12px; justify-content: flex-end; align-items: center;">
-                        <button class="btn btn-outline small" style="border-radius: 8px;" onclick="viewOrderDetail('${order._id}', 'details')">
-                           <i class="fas fa-list-ul" style="margin-right:6px;"></i> View Details
-                        </button>
+                    <div style="display: flex; gap: 12px; justify-content: flex-end; align-items: center; flex-wrap: wrap;">
                         
                         ${(order.status !== 'Cancelled' && order.status !== 'Failed') ? `
-                            <button class="btn btn-outline small" style="border-radius: 8px; border-color: rgba(255,211,105,0.3); color: var(--gold-text);" onclick="viewOrderDetail('${order._id}', 'track')">
-                                <i class="fas fa-truck-moving" style="margin-right:6px;"></i> Trace Order
+                            <a href="tracking.html?id=${order.orderId}" target="_blank" class="btn btn-outline small" style="border-radius: 8px; border-color: rgba(255,211,105,0.3); color: var(--gold-text); text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                                <i class="fas fa-satellite-dish"></i> Track Order
+                            </a>
+                            <button class="btn btn-outline small" style="border-radius: 8px;" onclick="viewOrderDetail('${order._id}', 'details')">
+                                <i class="fas fa-list-ul" style="margin-right:6px;"></i> Details
                             </button>
                             <button class="btn btn-gold small" style="border-radius: 8px; box-shadow: 0 4px 15px rgba(212,175,55,0.2);" onclick="downloadInvoice('${order._id}')">
                                 <i class="fas fa-file-invoice" style="margin-right:6px;"></i> Invoice
@@ -3295,22 +3295,37 @@ window.viewOrderDetail = async function (id, mode = 'details') {
                 `;
             }).join('');
 
-            // Add AWB display and Refresh button if AWB is present
-            const awb = order.awbNumber || order.awb || order.shipmentId; // Check all possible AWB fields
+            // Add AWB display + Refresh + full-page track link if AWB is present
+            const awb = order.awbNumber || order.awb || order.shipmentId;
+            const awbPanel = document.createElement('div');
+            awbPanel.id = 'awb-info-panel';
             if (awb && awb.length > 5) {
-                timeline.insertAdjacentHTML('afterend', `
-                    <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
+                awbPanel.innerHTML = `
+                    <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                         <div>
-                            <span style="font-size: 0.75rem; opacity: 0.5; display: block; margin-bottom: 5px;">AWB NUMBER</span>
-                            <span style="font-weight: 700; color: white; letter-spacing: 1px;">${awb}</span>
+                            <span style="font-size: 0.7rem; opacity: 0.5; display: block; margin-bottom: 4px; letter-spacing: 1.5px; text-transform: uppercase;">AWB Number</span>
+                            <span style="font-weight: 700; color: white; font-family: monospace; letter-spacing: 1px;">${awb}</span>
                         </div>
-                        <button class="btn btn-outline small" onclick="refreshTrackingData('${awb}')" id="refresh-track-btn">
-                            <i class="fas fa-sync-alt"></i> Refresh Live Status
-                        </button>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-outline small" onclick="refreshTrackingData('${awb}')" id="refresh-track-btn" style="border-radius: 8px;">
+                                <i class="fas fa-sync-alt" style="margin-right: 6px;"></i> Refresh Live
+                            </button>
+                            <a href="tracking.html?id=${order.orderId}" target="_blank" class="btn btn-gold small" style="border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                                <i class="fas fa-satellite-dish"></i> Full Tracking Page
+                            </a>
+                        </div>
                     </div>
                     <div id="live-tracking-updates" style="margin-top: 15px;"></div>
-                `);
+                `;
+            } else {
+                awbPanel.innerHTML = `
+                    <div style="margin-top: 20px; padding: 20px; background: rgba(212,175,55,0.04); border: 1px dashed rgba(212,175,55,0.15); border-radius: 12px; text-align: center;">
+                        <i class="fas fa-box-open" style="color: rgba(212,175,55,0.3); font-size: 1.5rem; margin-bottom: 10px; display: block;"></i>
+                        <p style="font-size: 0.85rem; opacity: 0.6; margin: 0;">Shipment not yet dispatched. Tracking will appear here once the package is picked up.</p>
+                    </div>
+                `;
             }
+            timeline.insertAdjacentElement('afterend', awbPanel);
         }
 
         modal.style.display = 'flex';
@@ -3503,31 +3518,49 @@ window.refreshTrackingData = async function (awb) {
         });
         const data = await res.json();
 
-        if (res.ok && data.status) {
-            // NimbusPost response usually has history in data.history or data.tracking_data
+        if (res.ok && data.status && data.data) {
             const tracking = data.data;
-            if (tracking && tracking.history) {
+            // Get history — NimbusPost may use various field names
+            const history = tracking.history || tracking.tracking_events || tracking.events || [];
+
+            if (history.length > 0) {
+                const sorted = [...history].reverse(); // Newest first
                 logs.innerHTML = `
-                    <div style="background: rgba(255,211,105,0.05); border-radius: 12px; padding: 15px; border: 1px border-dashed rgba(255,211,105,0.2);">
-                        <p style="margin: 0 0 10px; font-size: 0.8rem; font-weight: 800; color: var(--gold-text); text-transform: uppercase;">Latest Updates from NimbusPost</p>
-                        ${tracking.history.slice(0, 3).map(h => `
-                            <div style="font-size: 0.85rem; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                                <span style="color: white; display: block; font-weight: 600;">${h.status || h.event_description}</span>
-                                <span style="opacity: 0.5; font-size: 0.75rem;">${h.location || 'In Transit'} • ${new Date(h.event_time || h.date).toLocaleString()}</span>
-                            </div>
-                        `).join('')}
+                    <div style="background: rgba(255,211,105,0.04); border-radius: 12px; padding: 18px; border: 1px solid rgba(255,211,105,0.12); margin-top: 4px;">
+                        <p style="margin: 0 0 14px; font-size: 0.72rem; font-weight: 800; color: var(--gold-text); text-transform: uppercase; letter-spacing: 2px;">NimbusPost Live Updates</p>
+                        ${sorted.slice(0, 5).map((h, i) => {
+                    const evStatus = h.status || h.event_description || h.activity || 'Update';
+                    const evLoc = h.location || h.city || h.hub || '';
+                    const evTime = h.event_time || h.timestamp || h.date || h.datetime;
+                    const timeStr = evTime ? new Date(evTime).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+                    return `
+                                <div style="display: flex; gap: 14px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04);">
+                                    <div style="flex-shrink: 0; margin-top: 4px;">
+                                        <div style="width: 10px; height: 10px; border-radius: 50%; background: ${i === 0 ? 'var(--gold-text)' : 'rgba(255,255,255,0.15)'}; box-shadow: ${i === 0 ? '0 0 8px rgba(212,175,55,0.5)' : 'none'};"></div>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <span style="display: block; font-size: 0.88rem; font-weight: 600; color: ${i === 0 ? 'var(--gold-text)' : 'rgba(255,255,255,0.85)'}; margin-bottom: 2px;">${evStatus}</span>
+                                        ${evLoc ? `<span style="font-size: 0.78rem; opacity: 0.55;"><i class="fas fa-map-marker-alt" style="font-size: 0.65rem; margin-right: 4px;"></i>${evLoc}</span>` : ''}
+                                        ${timeStr ? `<span style="display: block; font-size: 0.72rem; opacity: 0.35; margin-top: 2px;">${timeStr}</span>` : ''}
+                                    </div>
+                                </div>
+                            `;
+                }).join('')}
                     </div>
                 `;
-                showToast("Live tracking updated", "success");
+                showToast('Live tracking updated', 'success');
             } else {
-                logs.innerHTML = `<p style="font-size: 0.8rem; opacity: 0.5; text-align: center;">Tracking info initiated. Waiting for carrier updates.</p>`;
+                logs.innerHTML = `<div style="padding: 20px; text-align: center; opacity: 0.5; font-size: 0.85rem;"><i class="fas fa-clock" style="margin-right: 8px;"></i>Carrier updates will appear once the package is picked up.</div>`;
+                showToast('Shipment registered. Awaiting pickup.', 'info');
             }
         } else {
-            showToast(data.message || "Tracking info not available yet", "info");
+            logs.innerHTML = `<div style="padding: 20px; text-align: center; opacity: 0.5; font-size: 0.85rem;"><i class="fas fa-satellite-dish" style="margin-right: 8px;"></i>${data.message || 'Tracking info not available yet. Check back soon.'}</div>`;
+            showToast(data.message || 'Tracking info not available yet', 'info');
         }
     } catch (e) {
-        console.error(e);
-        showToast("Error connecting to shipping server", "error");
+        console.error('refreshTrackingData error:', e);
+        logs.innerHTML = `<div style="padding: 20px; text-align: center; color: #ff4d4d; font-size: 0.85rem;"><i class="fas fa-wifi" style="margin-right: 8px;"></i>Connection error. Please try again.</div>`;
+        showToast('Error connecting to shipping server', 'error');
     } finally {
         btn.innerHTML = originalHTML;
         btn.disabled = false;

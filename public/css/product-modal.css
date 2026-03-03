@@ -283,61 +283,66 @@
     line-height: 1.5;
 }
 
-/* Tabs */
-.pm-tabs {
+/* Accordion Styles */
+.pm-accordion {
     border-top: 1px solid rgba(255, 211, 105, 0.1);
-    padding-top: 20px;
+    margin-top: 15px;
 }
 
-.pm-tab-headers {
-    display: flex;
-    gap: 20px;
+.pm-accordion-item {
     border-bottom: 1px solid rgba(255, 211, 105, 0.1);
-    margin-bottom: 15px;
 }
 
-.pm-tab-btn {
+.pm-accordion-header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     background: none;
     border: none;
-    color: rgba(255, 255, 255, 0.6);
-    padding: 10px 0;
-    font-weight: 700;
+    padding: 15px 0;
     cursor: pointer;
-    position: relative;
-    transition: color 0.3s ease;
-    font-size: 0.95rem;
-    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 700;
+    font-size: 0.9rem;
     letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
 }
 
-.pm-tab-btn.active {
+.pm-accordion-header:hover {
     color: var(--gold-energy);
 }
 
-.pm-tab-btn.active::after {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: 0;
-    width: 100%;
-    height: 3px;
-    background: var(--gold-energy);
-    box-shadow: 0 0 10px var(--gold-energy);
+.pm-accordion-header.active {
+    color: var(--gold-energy);
 }
 
-.pm-tab-content {
+.pm-accordion-header i {
+    font-size: 0.8rem;
+    transition: transform 0.3s ease;
+    opacity: 0.5;
+}
+
+.pm-accordion-header.active i {
+    transform: rotate(180deg);
+    opacity: 1;
+}
+
+.pm-accordion-content {
     display: none;
-    animation: fadeInTab 0.4s ease;
+    padding-bottom: 20px;
+    animation: fadeInAccordion 0.4s ease forwards;
 }
 
-.pm-tab-content.active {
+.pm-accordion-content.active {
     display: block;
 }
 
-@keyframes fadeInTab {
+@keyframes fadeInAccordion {
     from {
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateY(-5px);
     }
 
     to {
@@ -429,22 +434,66 @@
 @media (max-width: 900px) {
     .product-modal-card {
         grid-template-columns: 1fr;
-        max-height: 90vh;
+        max-height: 80vh;
+        width: 85%;
+        margin: auto;
+        border-radius: 12px;
         overflow-y: auto;
     }
 
     .pm-left {
         border-right: none;
         border-bottom: 1px solid rgba(255, 211, 105, 0.1);
-        padding: 20px;
+        padding: 8px;
     }
 
     .pm-image-container {
-        max-width: 200px;
+        max-width: 80px;
+        height: auto;
+        margin: 0 auto;
+    }
+
+    .pm-main-actions {
+        margin-top: 8px;
+        gap: 5px;
+    }
+
+    .pm-btn {
+        padding: 5px 8px;
+        font-size: 0.6rem;
+        height: 32px;
+        border-radius: 8px;
     }
 
     .pm-right {
-        padding: 25px;
+        padding: 10px 12px;
+    }
+
+    .pm-title {
+        font-size: 0.9rem;
+        margin-bottom: 2px;
+    }
+
+    .pm-edition {
+        font-size: 0.75rem;
+        margin-bottom: 6px;
+    }
+
+    .pm-price {
+        font-size: 1.1rem;
+    }
+
+    .pm-collection-intro {
+        margin-bottom: 8px;
+        padding: 4px 8px;
+    }
+
+    .pm-collection-intro p {
+        font-size: 0.7rem;
+    }
+
+    #tab-desc p {
+        font-size: 0.8rem;
     }
 }
 

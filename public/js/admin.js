@@ -1065,6 +1065,8 @@ async function initializeDashboard(user) {
 
         // Show admin-only sidebar items
         document.querySelectorAll('.admin-nav').forEach(btn => btn.classList.remove('hidden'));
+        const partnersBtn = document.getElementById('sidebar-partners-btn');
+        if (partnersBtn) partnersBtn.classList.remove('hidden');
 
 
     } else {
