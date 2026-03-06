@@ -194,7 +194,18 @@ class EFVChatbot {
 
         const contentDiv = document.createElement('div');
         contentDiv.className = 'efv-message-content';
-        contentDiv.textContent = text;
+
+        if (sender === 'ai') {
+            // Professional Formatting for AI
+            let formattedText = text
+                .replace(/\n/g, '<br>') // Support newlines
+                .replace(/\*\*(.*?)\*\*/g, '<span style="color: #d4af37; font-weight: bold;">$1</span>') // Highlight **words** as Gold Bold
+                .replace(/• (.*?)(?=<br>|$)/g, '<div style="margin-left: 15px; margin-bottom: 5px;">• $1</div>'); // Indent bullet points
+
+            contentDiv.innerHTML = formattedText;
+        } else {
+            contentDiv.textContent = text;
+        }
 
         messageDiv.appendChild(contentDiv);
         messagesContainer.appendChild(messageDiv);
